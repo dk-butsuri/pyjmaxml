@@ -1,0 +1,25 @@
+{
+  "description": "WarningState の対象外の電文（H27形式 VPWW54、時系列 VPWP50）は unsupported として捨てる。",
+  "steps": [
+    {
+      "file": "../_shared/vpww54_h27.xml",
+      "expect": {
+        "applied": false,
+        "skip_reason": "unsupported",
+        "changes": {
+          "count": 0
+        }
+      }
+    },
+    {
+      "file": "../_shared/vpwp50.xml",
+      "expect": {
+        "applied": false,
+        "skip_reason": "unsupported",
+        "changes": {
+          "count": 0
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "description": "VPWS50（00:00、取り込み済みの最新発表時刻 W=22:06）より後の VPWW61（00:05、鹿児島市に乾燥注意報）が先に届く。VPWS50 では鹿児島市は「なし」だが、W より新しいセルは消さない。",
+  "steps": [
+    {
+      "file": "01.xml",
+      "expect": {
+        "applied": true,
+        "skip_reason": null,
+        "cities": {
+          "4620100": [
+            "乾燥注意報"
+          ],
+          "4620600": [
+            "霜注意報"
+          ]
+        },
+        "changes": {
+          "count": 10,
+          "contains": [
+            {
+              "scope": "city",
+              "area": "4620100",
+              "group": "VPWW61",
+              "type": "ISSUED"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "file": "../_shared/vpws50_20261112T0000.xml",
+      "expect": {
+        "applied": true,
+        "skip_reason": null,
+        "cities": {
+          "4620100": [
+            "乾燥注意報"
+          ],
+          "4620600": [
+            "霜注意報"
+          ]
+        },
+        "changes": {
+          "excludes_areas": [
+            "4620100",
+            "4620600"
+          ]
+        }
+      }
+    },
+    {
+      "file": "../_shared/vpww61_kagoshima_20261111T2122.xml",
+      "expect": {
+        "applied": false,
+        "skip_reason": "stale",
+        "cities": {
+          "4620100": [
+            "乾燥注意報"
+          ]
+        },
+        "changes": {
+          "count": 0
+        }
+      }
+    }
+  ]
+}

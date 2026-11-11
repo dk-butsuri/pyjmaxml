@@ -1,0 +1,25 @@
+{
+  "description": "同じ電文が2回届く。2回目は duplicate として捨てる。",
+  "steps": [
+    {
+      "file": "../_shared/vpww55_wakkanai_20200622T2300.xml",
+      "expect": {
+        "applied": true,
+        "skip_reason": null,
+        "changes": {
+          "count": 10
+        }
+      }
+    },
+    {
+      "file": "../_shared/vpww55_wakkanai_20200622T2300.xml",
+      "expect": {
+        "applied": false,
+        "skip_reason": "duplicate",
+        "changes": {
+          "count": 0
+        }
+      }
+    }
+  ]
+}

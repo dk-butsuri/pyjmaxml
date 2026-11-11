@@ -1,0 +1,67 @@
+{
+  "description": "水位周知河川（発表区間 8201813100）：レベル２発表 → 解除（コード10）。",
+  "steps": [
+    {
+      "file": "../_shared/vxsu_8201813100_l2.xml",
+      "expect": {
+        "applied": true,
+        "skip_reason": null,
+        "cities": {
+          "0442100": [
+            "レベル２氾濫注意報"
+          ],
+          "0442400": [
+            "レベル２氾濫注意報"
+          ]
+        },
+        "rivers": {
+          "8201813100": {
+            "group": "VXSU",
+            "kinds": [
+              "レベル２氾濫注意報"
+            ],
+            "cities": [
+              "0442100",
+              "0442400"
+            ]
+          }
+        },
+        "changes": {
+          "count": 1,
+          "contains": [
+            {
+              "scope": "river",
+              "area": "8201813100",
+              "group": "VXSU",
+              "type": "ISSUED"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "file": "02.xml",
+      "expect": {
+        "applied": true,
+        "skip_reason": null,
+        "cities": {
+          "0442100": []
+        },
+        "rivers_absent": [
+          "8201813100"
+        ],
+        "changes": {
+          "count": 1,
+          "contains": [
+            {
+              "scope": "river",
+              "area": "8201813100",
+              "group": "VXSU",
+              "type": "CANCELLED"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

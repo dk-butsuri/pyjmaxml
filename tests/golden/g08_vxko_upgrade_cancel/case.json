@@ -1,0 +1,108 @@
+{
+  "description": "指定河川洪水予報（小矢部川）：レベル２発表 → レベル３へ引上げ → 取消。取消は情報単位全体の取消なので、河川の状態ごと消える。",
+  "steps": [
+    {
+      "file": "../_shared/vxko_oyabe_l2.xml",
+      "expect": {
+        "applied": true,
+        "skip_reason": null,
+        "cities": {
+          "1620900": [
+            "レベル２氾濫注意報"
+          ],
+          "1621100": [
+            "レベル２氾濫注意報"
+          ]
+        },
+        "rivers": {
+          "840410000100": {
+            "group": "VXKO",
+            "kinds": [
+              "レベル２氾濫注意報"
+            ],
+            "cities": [
+              "1620200",
+              "1620800",
+              "1620900",
+              "1621000",
+              "1621100"
+            ]
+          }
+        },
+        "changes": {
+          "count": 1,
+          "contains": [
+            {
+              "scope": "river",
+              "area": "840410000100",
+              "group": "VXKO",
+              "type": "ISSUED"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "file": "02.xml",
+      "expect": {
+        "applied": true,
+        "skip_reason": null,
+        "cities": {
+          "1620900": [
+            "レベル３氾濫警報"
+          ]
+        },
+        "rivers": {
+          "840410000100": {
+            "group": "VXKO",
+            "kinds": [
+              "レベル３氾濫警報"
+            ],
+            "cities": [
+              "1620200",
+              "1620800",
+              "1620900",
+              "1621000",
+              "1621100"
+            ]
+          }
+        },
+        "changes": {
+          "count": 1,
+          "contains": [
+            {
+              "scope": "river",
+              "area": "840410000100",
+              "group": "VXKO",
+              "type": "UPGRADED"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "file": "03.xml",
+      "expect": {
+        "applied": true,
+        "skip_reason": null,
+        "cities": {
+          "1620900": []
+        },
+        "rivers_absent": [
+          "840410000100"
+        ],
+        "changes": {
+          "count": 1,
+          "contains": [
+            {
+              "scope": "river",
+              "area": "840410000100",
+              "group": "VXKO",
+              "type": "CANCELLED"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "description": "訂正電文：ReportDateTime は同じで、Control/DateTime が新しい。猿払村がレベル３→レベル２に訂正される。",
+  "steps": [
+    {
+      "file": "../_shared/vpww55_wakkanai_20200622T2300.xml",
+      "expect": {
+        "applied": true,
+        "skip_reason": null,
+        "changes": {
+          "count": 10
+        }
+      }
+    },
+    {
+      "file": "02.xml",
+      "expect": {
+        "applied": true,
+        "skip_reason": null,
+        "cities": {
+          "0151100": [
+            "レベル２大雨注意報"
+          ],
+          "0121400": [
+            "レベル４大雨危険警報"
+          ]
+        },
+        "changes": {
+          "count": 1,
+          "contains": [
+            {
+              "scope": "city",
+              "area": "0151100",
+              "group": "VPWW55",
+              "type": "DOWNGRADED"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

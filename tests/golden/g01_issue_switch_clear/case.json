@@ -1,0 +1,93 @@
+{
+  "description": "VPWW55 の発表 → 切替（危険警報→警報）→ 解除。稚内地方気象台の同じ情報単位で Control/DateTime が進む。",
+  "steps": [
+    {
+      "file": "../_shared/vpww55_wakkanai_20200622T2300.xml",
+      "expect": {
+        "applied": true,
+        "skip_reason": null,
+        "cities": {
+          "0121400": [
+            "レベル４大雨危険警報"
+          ],
+          "0151100": [
+            "レベル３大雨警報"
+          ],
+          "0151200": [
+            "レベル２大雨注意報"
+          ],
+          "0152000": [
+            "レベル２大雨注意報"
+          ]
+        },
+        "changes": {
+          "count": 10,
+          "contains": [
+            {
+              "scope": "city",
+              "area": "0121400",
+              "group": "VPWW55",
+              "type": "ISSUED"
+            },
+            {
+              "scope": "city",
+              "area": "0152000",
+              "group": "VPWW55",
+              "type": "ISSUED"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "file": "../_shared/vpww55_wakkanai_20200623T0000_downgrade.xml",
+      "expect": {
+        "applied": true,
+        "skip_reason": null,
+        "cities": {
+          "0121400": [
+            "レベル３大雨警報"
+          ],
+          "0151100": [
+            "レベル３大雨警報"
+          ]
+        },
+        "changes": {
+          "count": 1,
+          "contains": [
+            {
+              "scope": "city",
+              "area": "0121400",
+              "group": "VPWW55",
+              "type": "DOWNGRADED"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "file": "03.xml",
+      "expect": {
+        "applied": true,
+        "skip_reason": null,
+        "cities": {
+          "0121400": [],
+          "0151100": [
+            "レベル３大雨警報"
+          ]
+        },
+        "changes": {
+          "count": 1,
+          "contains": [
+            {
+              "scope": "city",
+              "area": "0121400",
+              "group": "VPWW55",
+              "type": "CANCELLED"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "description": "Status が 訓練 / 試験 の電文は無視される（状態は変わらない）。",
+  "steps": [
+    {
+      "file": "../_shared/vpww55_wakkanai_20200622T2300.xml",
+      "expect": {
+        "applied": true,
+        "skip_reason": null,
+        "changes": {
+          "count": 10
+        }
+      }
+    },
+    {
+      "file": "02.xml",
+      "expect": {
+        "applied": false,
+        "skip_reason": "status",
+        "cities": {
+          "0121400": [
+            "レベル４大雨危険警報"
+          ]
+        },
+        "changes": {
+          "count": 0
+        }
+      }
+    },
+    {
+      "file": "03.xml",
+      "expect": {
+        "applied": false,
+        "skip_reason": "status",
+        "cities": {
+          "0121400": [
+            "レベル４大雨危険警報"
+          ]
+        },
+        "changes": {
+          "count": 0
+        }
+      }
+    }
+  ]
+}

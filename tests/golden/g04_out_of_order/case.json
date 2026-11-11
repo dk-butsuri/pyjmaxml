@@ -1,0 +1,35 @@
+{
+  "description": "新しい電文が先に届き、古い電文が後から届く。古い方は stale として捨てる。",
+  "steps": [
+    {
+      "file": "../_shared/vpww55_wakkanai_20200623T0000_downgrade.xml",
+      "expect": {
+        "applied": true,
+        "skip_reason": null,
+        "cities": {
+          "0121400": [
+            "レベル３大雨警報"
+          ]
+        },
+        "changes": {
+          "count": 10
+        }
+      }
+    },
+    {
+      "file": "../_shared/vpww55_wakkanai_20200622T2300.xml",
+      "expect": {
+        "applied": false,
+        "skip_reason": "stale",
+        "cities": {
+          "0121400": [
+            "レベル３大雨警報"
+          ]
+        },
+        "changes": {
+          "count": 0
+        }
+      }
+    }
+  ]
+}
