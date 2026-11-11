@@ -1,0 +1,22 @@
+HTTP/1.1 304 Not Modified
+Connection: keep-alive
+Server: AmazonS3
+Last-Modified: Wed, 11 Nov 2026 13:58:23 GMT
+x-amz-server-side-encryption: AES256
+Date: Wed, 11 Nov 2026 15:45:03 GMT
+Cache-Control: max-age=60
+ETag: W/"a6d569c91898fc7cac6ae2cddc9091bf"
+Vary: Accept-Encoding
+X-Cache: Hit from cloudfront
+Via: 1.1 c217d6c0869cec6696750873ca3cb62e.cloudfront.net (CloudFront)
+X-Amz-Cf-Pop: NRT12-P9
+X-Amz-Cf-Id: RXQcGo8JU1ZeP2utmmgVf6-_DOFhobmDoYtZUoVm30-qo-ZEbGfODA==
+Age: 42
+X-XSS-Protection: 1; mode=block
+X-Frame-Options: SAMEORIGIN
+Referrer-Policy: strict-origin-when-cross-origin
+Content-Security-Policy: script-src 'self' 'unsafe-inline' 'unsafe-eval' www.jma.go.jp www.jma-net.go.jp js.jma.go.jp www.data.jma.go.jp ds.data.jma.go.jp www.google.com www.gstatic.com jma.genieesspv.jp pagead2.googlesyndication.com code.jquery.com ajaxzip3.github.io cdn.jsdelivr.net ajax.aspnetcdn.com code.createjs.com tml5shiv.googlecode.com unpkg.com cdnjs.cloudflare.com ajax.googleapis.com platform.twitter.com github.githubassets.com maps.gsi.go.jp img.gsspat.jp
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=31536000; preload
+Vary: Origin
+

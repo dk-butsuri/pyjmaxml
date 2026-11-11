@@ -12,7 +12,7 @@
 3. この文書と、実際の電文や一次資料が矛盾したら、**自分で設計を変えずに止まって報告する**。「どちらでもよい」と書いてあるところだけは、自分で判断してよい
 4. 公開 API（`jmadantic/__init__.py` から見えるもの）に `Any` / `object` を出さない。`pyright --verifytypes jmadantic --ignoreexternal` で確認する（外部ライブラリの型の不備は対象外。理由は §4）
 5. 1つのマイルストーンが終わるたびに、完了条件をすべて実行した結果を報告する
-6. 気象庁のサーバーに、テストや CI からアクセスしない（M2 の実機確認は手動で1回だけ。§2 M2 を参照）
+6. 気象庁のサーバーに、テストや CI からアクセスしない（M2 で使うフィードは `tests/data/feed/` に用意済み）
 
 ---
 
@@ -183,7 +183,8 @@ I/O を持たない中核（`FeedPoller`）と、通信だけを担当する薄�
 4. テスト
    - `tests/test_feed_core.py`：`FeedPoller` を直接テストする（200 → 304 → 新しいエントリーあり、重複 id、間隔違反、ヘッダー）。`now` は引数で渡す
    - `tests/test_feed_sync.py`：偽の `HttpClient` で `FeedClient` が `FeedPoller` に正しく橋渡ししていることだけ確認する
-   - `tests/data/feed/` に録画したフィード XML を置く。録画用の XML は、**手動で1回だけ**取得する（`extra.xml` と `regular.xml` を1回ずつ）。CI では取得しない
+   - 録画したフィードは **`tests/data/feed/` に用意済み**（2026-11-12 取得。本文・レスポンスヘッダー・304 のヘッダー。詳細は同じ場所の README）。新たに取得しない
+   - 実測：ETag は弱い ETag（`W/"..."`）、`Last-Modified` あり、`Cache-Control: max-age=60`、条件付き GET には 304 が返る
 - **完了条件**：上のテストが通る。ネットワークにアクセスするテストはない。`_core.py` が `urllib`・`httpx`・`time`・`socket` を import していない（テストで確認する）
 
 #### M2b. 非同期（今は作らない。必要になったら追加）

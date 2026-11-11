@@ -1,0 +1,25 @@
+HTTP/1.1 200 OK
+Content-Type: text/xml
+Transfer-Encoding: chunked
+Connection: keep-alive
+Server: AmazonS3
+Last-Modified: Wed, 11 Nov 2026 15:41:38 GMT
+Content-Encoding: br
+x-amz-server-side-encryption: AES256
+Date: Wed, 11 Nov 2026 15:44:50 GMT
+Cache-Control: max-age=60
+ETag: W/"7d20bec400026641b4b9d1145761b830"
+Vary: Accept-Encoding
+X-Cache: Hit from cloudfront
+Via: 1.1 b3501c20a49de1b44e6f6541d94742b6.cloudfront.net (CloudFront)
+X-Amz-Cf-Pop: NRT12-P9
+X-Amz-Cf-Id: HK-SrZP-HcaNSj-gfZHX94sseSXF75RLp0unZ2kgn4luJ2CNZRcXIw==
+Age: 40
+X-XSS-Protection: 1; mode=block
+X-Frame-Options: SAMEORIGIN
+Referrer-Policy: strict-origin-when-cross-origin
+Content-Security-Policy: script-src 'self' 'unsafe-inline' 'unsafe-eval' www.jma.go.jp www.jma-net.go.jp js.jma.go.jp www.data.jma.go.jp ds.data.jma.go.jp www.google.com www.gstatic.com jma.genieesspv.jp pagead2.googlesyndication.com code.jquery.com ajaxzip3.github.io cdn.jsdelivr.net ajax.aspnetcdn.com code.createjs.com tml5shiv.googlecode.com unpkg.com cdnjs.cloudflare.com ajax.googleapis.com platform.twitter.com github.githubassets.com maps.gsi.go.jp img.gsspat.jp
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=31536000; preload
+Vary: Origin
+
