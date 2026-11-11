@@ -107,6 +107,8 @@
 | strict | `parse(data, *, strict=False)`。strict のときは `ParserConfig(fail_on_unknown_properties=True, fail_on_converter_warnings=True)` |
 | 時刻 | 公開 API では `datetime`（tz 付き）にする。xsdata の `XmlDateTime` を外に出さない |
 | HTTP | `HttpClient` Protocol。デフォルトは `urllib.request`、extra で `jmadantic[httpx]` |
+| 電文の取りこぼし | `poll()` では seen に記録しない。利用者が `ack()` したときに記録する。ack されていないものは 304 のときも含めて毎回返す |
+| User-Agent | 既定 `jmadantic/<version>`、`user_agent` 引数で上書き。リポジトリ URL は入れない |
 | 同期 / 非同期 | フィードは sans-IO（`FeedPoller`）＋ 薄い同期層（`FeedClient`）。非同期の `AsyncFeedClient` は M2b として後から足す。`parse` と状態管理は I/O なしなので、どちらからでも使える |
 | `apply` の戻り値 | `ApplyResult(applied: bool, skip_reason: SkipReason \| None, changes: tuple[Change, ...])`。plan.md の `list[Change]` から変更（スキップの理由をテストするため） |
 | 永続化 | `to_json() -> str` / `from_json(s) -> Self`。トップレベルに `"version": 1` を入れる。重複除去と新旧判定の記録も含める |
@@ -167,29 +169,45 @@ I/O を持たない中核（`FeedPoller`）と、通信だけを担当する薄�
    - `FeedKind`（REGULAR / EXTRA / EQVOL / OTHER）と `long: bool` から URL を組み立てる
    - `Entry`（frozen）：id, title, updated(datetime), author, url
    - `HttpRequest`（frozen）：method, url, headers。`HttpResponse`（frozen）：status, headers, body(bytes)
-   - `FeedPoller(kind, *, long=False, seen=None, min_interval=None, unsafe_min_interval=False)`
+   - `FeedPoller(kind, *, long=False, seen=None, min_interval=None, unsafe_min_interval=False, user_agent=None)`
      - `next_request(now: datetime) -> HttpRequest`：ETag / Last-Modified を付けた条件付きGETを組み立てる。前回から最小間隔が経っていなければ `TooFrequentError`
-     - `handle_response(resp: HttpResponse, now: datetime) -> list[Entry]`：304 なら `[]`。200 なら Atom を解析し、ETag / Last-Modified を記録して、まだ見ていない id のエントリーだけを返す（返したものは seen に記録する）
+     - `handle_response(resp: HttpResponse, now: datetime) -> list[Entry]`：**未処理のエントリー**をすべて返す（下の「ack と未処理」を参照）。200 なら Atom を解析して ETag / Last-Modified を記録し、seen にも未処理にもない id を未処理に加える。304 なら未処理だけを返す
+     - `ack(entry: Entry | str) -> None`：そのエントリー（または id）を未処理から外し、seen に記録する。未処理にない id でも seen に記録する（何度呼んでもよい）
+     - **ack と未処理**（電文の取りこぼし対策）
+       - `poll()` が返しただけでは seen に記録しない。利用者が処理を終えて `ack()` したときに初めて記録する。`fetch()` が失敗したら ack しなければ、次の `poll()` でもう一度返る
+       - 未処理は FeedPoller が持つ（id → Entry、最初に見つけた順）。フィードから消えても、ack されるまで残す。上限は 1,000件で、超えたら古いものから捨てて `logging` で warning を出す
+       - 返す順番は、未処理に加わった順（同じ応答の中ではフィードに書かれた順）
+       - 興味のない電文は、その場で `ack()` すればよい
+       - 未処理は永続化しない（再起動したら、長期フィードで埋める運用にする）
      - `entry_request(entry) -> HttpRequest`：電文本体を取得するリクエストを組み立てる
    - 最小間隔：高頻度 60秒、長期 3600秒。`min_interval` で長くはできるが、短くするには `unsafe_min_interval=True` が必要
    - `SeenStore` Protocol（`__contains__`、`add`）。デフォルトは上限 10,000件の LRU
-   - User-Agent：`jmadantic/<version> (+https://github.com/<repo>)`。ヘッダーは `next_request` / `entry_request` で付ける
-2. `jmadantic/feed/_sync.py`：`FeedClient(kind, *, long=False, http=None, seen=None, clock=None, ...)`
+   - User-Agent：既定は `jmadantic/<version>`。`user_agent` 引数で上書きできる（運用者が連絡先を入れるため）。空文字はエラー。リポジトリ URL は入れない。ヘッダーは `next_request` / `entry_request` で付ける
+2. `jmadantic/feed/_sync.py`：`FeedClient(kind, *, long=False, http=None, seen=None, clock=None, user_agent=None, ...)`
    - `HttpClient` Protocol：`send(req: HttpRequest) -> HttpResponse`。デフォルトは `urllib.request` の実装。`jmadantic[httpx]` が入っていれば httpx の実装も選べる
    - `poll() -> list[Entry]`：`next_request` → `http.send` → `handle_response` を行うだけ
-   - `fetch(entry) -> bytes`：`entry_request` → `http.send` → body を返す（gzip のままでもよい。`parse` が対応している）
+   - `fetch(entry) -> bytes`：`entry_request` → `http.send` → body を返す（gzip のままでもよい。`parse` が対応している）。**fetch は ack しない**
+   - `ack(entry: Entry | str) -> None`：`FeedPoller.ack` をそのまま呼ぶ
+   - 使い方の例（README にも載せる）：`for e in client.poll(): data = client.fetch(e); state.apply(parse(data)); client.ack(e)`
    - **ロジックを書かない**。分岐が必要になったら `_core.py` に入れる
 3. `jmadantic/feed/__init__.py`：`FeedKind`、`Entry`、`FeedPoller`、`FeedClient`、`SeenStore`、`TooFrequentError` を再エクスポートする
 4. テスト
    - `tests/test_feed_core.py`：`FeedPoller` を直接テストする（200 → 304 → 新しいエントリーあり、重複 id、間隔違反、ヘッダー）。`now` は引数で渡す
    - `tests/test_feed_sync.py`：偽の `HttpClient` で `FeedClient` が `FeedPoller` に正しく橋渡ししていることだけ確認する
+   - ack のテスト（`test_feed_core.py`）：
+     - ack しないと、次の 200 でも 304 でも同じエントリーが返る
+     - ack したエントリーは、200 でも 304 でも返らない
+     - フィードから消えた未処理エントリーも、ack されるまで返る
+     - 未処理が上限を超えたら古いものから捨てる
+     - `fetch()` が例外を投げたエントリーが、次の `poll()` で返る（`test_feed_sync.py`）
+   - User-Agent：既定値と、`user_agent` で上書きした値が、フィードと電文の両方のリクエストに付く
    - 録画したフィードは **`tests/data/feed/` に用意済み**（2026-11-12 取得。本文・レスポンスヘッダー・304 のヘッダー。詳細は同じ場所の README）。新たに取得しない
    - 実測：ETag は弱い ETag（`W/"..."`）、`Last-Modified` あり、`Cache-Control: max-age=60`、条件付き GET には 304 が返る
 - **完了条件**：上のテストが通る。ネットワークにアクセスするテストはない。`_core.py` が `urllib`・`httpx`・`time`・`socket` を import していない（テストで確認する）
 
 #### M2b. 非同期（今は作らない。必要になったら追加）
 - `jmadantic/feed/_async.py`：`AsyncFeedClient`。`AsyncHttpClient` Protocol（`async def send(req) -> HttpResponse`）、デフォルト実装は `httpx.AsyncClient`（extra 必須）
-- `poll()` / `fetch()` を `async def` にして、中身は `_sync.py` と同じ橋渡しだけにする。`FeedPoller` は共有する
+- `poll()` / `fetch()` を `async def` にして、中身は `_sync.py` と同じ橋渡しだけにする（`ack()` は同期のまま）。`FeedPoller` は共有する
 - テストは `tests/test_feed_async.py` で橋渡しだけ確認する（`FeedPoller` のテストは使い回す）
 - `parse` と `WarningState` は I/O をしないので、非同期版は不要
 
