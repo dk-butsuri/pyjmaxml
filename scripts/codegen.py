@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import argparse
 import ast
 import hashlib
 import importlib.metadata
+import json
 import os
 import subprocess
 import sys
@@ -12,8 +14,11 @@ import tempfile
 import tomllib
 import urllib.parse
 import urllib.request
+from io import BytesIO
 from pathlib import Path
 from zipfile import ZipFile
+
+from openpyxl import load_workbook
 
 ROOT = Path(__file__).resolve().parents[1]
 VENDOR = ROOT / "vendor"
@@ -26,10 +31,12 @@ BODY_NAMESPACES = {
 }
 
 
-def acquire(filename: str, expected_hash: str) -> Path:
+def acquire(filename: str, expected_hash: str, *, offline: bool = False) -> Path:
     """Reuse verified downloads; never silently accept a changed upstream artifact."""
     target = VENDOR / filename
     if not target.exists():
+        if offline:
+            raise FileNotFoundError(f"Missing cached source in offline mode: {target}")
         url = "https://xml.kishou.go.jp/" + urllib.parse.quote(filename)
         req = urllib.request.Request(url, headers={"User-Agent": "jmadantic-codegen/0.1.0"})
         with urllib.request.urlopen(req, timeout=60) as response:
@@ -40,6 +47,133 @@ def acquire(filename: str, expected_hash: str) -> Path:
     if hashlib.sha256(target.read_bytes()).hexdigest() != expected_hash:
         raise RuntimeError(f"SHA-256 mismatch for {target}; remove it to download again")
     return target
+
+
+def _code(value: object, width: int) -> str:
+    # The city workbook stores two seven-digit Kobe codes as numeric cells.
+    # Convert those integers directly; never infer missing leading zeroes.
+    if isinstance(value, int) and not isinstance(value, bool):
+        value = str(value)
+    if (
+        not isinstance(value, str)
+        or not value.isascii()
+        or not value.isdecimal()
+        or len(value) != width
+    ):
+        raise ValueError(f"Expected a {width}-digit code, got {value!r}")
+    return value
+
+
+def _name(value: object) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"Expected a nonempty area name, got {value!r}")
+    return value
+
+
+def city_codes(data: bytes) -> dict[str, tuple[str, str, str]]:
+    """Read cities flagged for weather warnings and their explicit parent links."""
+    book = load_workbook(BytesIO(data), read_only=True, data_only=False)
+    try:
+        city = book["AreaInformationCity"]
+        relation = book["AreaForecastLocalM（関係表　警報・注意報"]
+        if city["A3"].value != "@code" or city["C3"].value != "@name":
+            raise ValueError("Unexpected AreaInformationCity columns")
+        if any(relation[f"{column}3"].value != "コード\n(@code)" for column in "ACE"):
+            raise ValueError("Unexpected AreaForecastLocalM relationship columns")
+        parents: dict[str, tuple[str, str]] = {}
+        for row in relation.iter_rows(min_row=4, max_col=6, values_only=True):
+            if row[0] is None:
+                continue
+            code = _code(row[0], 6)
+            if code in parents:
+                raise ValueError(f"Duplicate grouping code: {code}")
+            parents[code] = (_code(row[4], 6), _code(row[2], 6))
+        result: dict[str, tuple[str, str, str]] = {}
+        for row in city.iter_rows(min_row=4, max_col=6, values_only=True):
+            # Column F explicitly marks use in weather warnings. Other rows
+            # describe different information products and may have no parent.
+            if row[5] != 1:
+                continue
+            code = _code(row[0], 7)
+            parent = _code(row[4], 6)
+            if code in result:
+                raise ValueError(f"Duplicate city code: {code}")
+            if parent not in parents:
+                raise ValueError(f"Missing forecast parent {parent} for city {code}")
+            prefecture, subdivision = parents[parent]
+            result[code] = (_name(row[2]), prefecture, subdivision)
+        if not result:
+            raise ValueError("No weather-warning cities found")
+        return result
+    finally:
+        book.close()
+
+
+def river_codes(data: bytes, sheet: str, width: int) -> dict[str, str]:
+    """Read the published code/name columns, allowing a header-only source."""
+    book = load_workbook(BytesIO(data), read_only=True, data_only=False)
+    try:
+        table = book[sheet]
+        if table["A3"].value != "@code" or table["B3"].value != "@name":
+            raise ValueError(f"Unexpected {sheet} columns")
+        result: dict[str, str] = {}
+        for row in table.iter_rows(min_row=4, max_col=2, values_only=True):
+            if row == (None, None):
+                continue
+            code = _code(row[0], width)
+            if code in result:
+                raise ValueError(f"Duplicate river code: {code}")
+            result[code] = _name(row[1])
+        return result
+    finally:
+        book.close()
+
+
+def generate_codes(archive: Path, destination: Path) -> None:
+    """Generate deterministic dict constants from the verified code archive."""
+    with ZipFile(archive) as source:
+        tables = [
+            ("AreaInformationCity-AreaForecastLocalM", "_area_city.py", "AREA_CITY"),
+            ("AreaFloodForecast", "_area_flood_forecast.py", "AREA_FLOOD_FORECAST"),
+            ("AreaWaterLevelWarning", "_area_water_level_warning.py", "AREA_WATER_LEVEL_WARNING"),
+        ]
+        outputs: dict[str, str] = {}
+        for table, filename, constant in tables:
+            members = [name for name in source.namelist() if name.endswith(f"_{table}.xlsx")]
+            if len(members) != 1:
+                raise ValueError(f"Expected one workbook for {table}, got {members}")
+            member = members[0]
+            data = source.read(member)
+            values = (
+                city_codes(data)
+                if constant == "AREA_CITY"
+                else river_codes(data, table, 12 if table == "AreaFloodForecast" else 10)
+            )
+            value_type = "tuple[str, str, str]" if constant == "AREA_CITY" else "str"
+            header = (
+                "# Generated by scripts/codegen.py; do not edit.\n"
+                f"# Archive: {archive.name}\n"
+                f"# Archive SHA-256: {hashlib.sha256(archive.read_bytes()).hexdigest()}\n"
+                f"# Workbook: {member}\n"
+                f"# Workbook SHA-256: {hashlib.sha256(data).hexdigest()}\n"
+            )
+            lines = [header, f"\n{constant}: dict[str, {value_type}] = {{\n"]
+            for code, value in sorted(values.items()):
+                formatted = (
+                    "(" + ", ".join(json.dumps(part, ensure_ascii=False) for part in value) + ")"
+                    if isinstance(value, tuple)
+                    else json.dumps(value, ensure_ascii=False)
+                )
+                lines.append(f"    {json.dumps(code)}: {formatted},\n")
+            lines.append("}\n")
+            if not values:
+                lines = [header, f"\n{constant}: dict[str, {value_type}] = {{}}\n"]
+            outputs[filename] = "".join(lines)
+            print(f"{constant}: {len(values)} entries")
+        # Validate all tables before writing any generated module.
+        destination.mkdir(parents=True, exist_ok=True)
+        for filename, text in outputs.items():
+            (destination / filename).write_text(text, encoding="utf-8", newline="\n")
 
 
 def extract(archive: Path, destination: Path, suffix: str) -> None:
@@ -132,12 +266,25 @@ def body_aliases(source: str) -> str:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--offline", action="store_true", help="Require verified cached sources")
+    parser.add_argument(
+        "--codes-only", action="store_true", help="Regenerate only area code tables"
+    )
+    args = parser.parse_args()
+    manifest = tomllib.loads((ROOT / "scripts" / "manifest.toml").read_text(encoding="utf-8"))
+    VENDOR.mkdir(exist_ok=True)
+    keys = ["codes"] if args.codes_only else list(manifest)
+    paths = {
+        key: acquire(manifest[key]["filename"], manifest[key]["sha256"], offline=args.offline)
+        for key in keys
+    }
+    if args.codes_only:
+        generate_codes(paths["codes"], ROOT / "jmadantic" / "codes")
+        return
     version = importlib.metadata.version("xsdata")
     if version != XSDATA_VERSION:
         raise RuntimeError(f"Expected xsdata {XSDATA_VERSION}, got {version}")
-    manifest = tomllib.loads((ROOT / "scripts" / "manifest.toml").read_text(encoding="utf-8"))
-    VENDOR.mkdir(exist_ok=True)
-    paths = {key: acquire(value["filename"], value["sha256"]) for key, value in manifest.items()}
     extract(paths["schema"], VENDOR / "schema", ".xsd")
     extract(paths["samples"], ROOT / "tests" / "data" / "samples", ".xml")
     extract(paths["codes"], VENDOR / "codes", ".xlsx")
@@ -179,6 +326,7 @@ def main() -> None:
         header + body_aliases(patched), encoding="utf-8", newline="\n"
     )
     print(f"Patched {count} nullable value fields")
+    generate_codes(paths["codes"], ROOT / "jmadantic" / "codes")
 
 
 if __name__ == "__main__":

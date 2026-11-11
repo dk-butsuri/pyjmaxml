@@ -216,3 +216,68 @@ M3の実行結果：
 - M2b、M4以降、git commit は行っていない。
 
 依頼の停止条件に従い、この未確定点を記録して作業を停止する。
+
+## M3 実装・検証結果（計画 8cd071f、2026-11-12）
+
+計画の全件分類対象が WarningState の対応電文に限定されたため、上記の停止理由は解消した。
+旧形式の04/18をUNKNOWNのまま維持し、M3を実装した。
+
+コード表：
+
+- manifest に記録されたローカルの ZIP と管理表の SHA-256 を再確認し、一致した。
+  気象庁へのアクセスは行っていない。
+- `scripts/codegen.py` にコード表生成を追加し、`--offline` と `--codes-only` を用意した。
+  オフライン時に配布物がない場合は、ダウンロードを試みず FileNotFoundError で終了する。
+  通常の全体生成にもコード表生成を組み込んだ。
+- 生成物は `jmadantic/codes/` の型注釈付き dict 定数。
+  アーカイブ名・SHA-256と、元xlsx名・SHA-256を生成ファイルに記録する。
+  実行時に openpyxl を import しない。
+- `AREA_CITY`：1,805件。元表の「気象警報・注意報で使用」フラグが1のコードを対象とし、
+  市町村等の名称・府県予報区コード・一次細分区域コードを警報・注意報の関係表から結合した。
+  他情報用のコードに所属先を推測して付与することはしていない。
+  神戸市須磨区・北区のコードは元表で整数セルだったため文字列に変換した。
+  先頭ゼロの補完や桁数の推測は行わない。
+- `AREA_FLOOD_FORECAST`：338件。
+- `AREA_WATER_LEVEL_WARNING`：0件。配布xlsxはヘッダー3行以外にデータがなく、
+  空の辞書を生成した。サンプルや外部資料からコードを補完していない。
+
+正規化：
+
+- `jmadantic/normalize/warning.py` に Element、Stage、frozenなWarningKind、
+  classify_mete / classify_flood、Predicate、3種の述語ヘルパー、rank を実装して公開した。
+- 気象の要素・段階・groupは§0.6のコード表から分類する。
+  大雨・土砂・高潮のlevelはNameの「レベルＮ」から取得し、他要素はNoneとする。
+  正規表現はこの明示的なラベルとASCII・全角の数字だけを対象にし、名称からコードは推測しない。
+- 氾濫は§0.7のコードから段階・levelを決める。旧名称も保持したまま分類する。
+- 気象00・氾濫10の解除はstage / levelをNoneとする。
+  気象00からは要素・groupを特定できないため、Element.UNKNOWN・空のgroupとして返す。
+  解除コードに未知コードの警告は出さない。
+- 未知の気象コードはElement.UNKNOWN・stage / level=None・空のgroupで、
+  未知の氾濫コードは指定されたgroupを保持して同様に返し、warningを出す。
+  Predicateの `&` / `|` は短絡評価し、欠けた段階・levelは閾値を満たすものとして扱わない。
+
+完了条件・関連検証の実行結果（Python 3.13.7 / Windows）：
+
+- `uv run --offline pytest tests/test_normalize.py tests/test_codes.py -q`：116件成功。
+  `tests/data/samples/` と `tests/golden/` 全体から選んだ対応電文46ファイルを
+  `strict=True` でパースし、公開data_type_codeで対象種別を確認した上で、
+  計画指定のXPathにあるKind/Codeを分類した。対象コード31種類を確認。
+  00・氾濫10の解除扱いを除き、すべてUNKNOWN以外となった。
+  CodeのないKindは計画どおり対象外。旧形式04/18がUNKNOWNを維持するテストも成功。
+- `uv run --offline pytest tests/test_codegen.py tests/test_code_tables_codegen.py -q`：18件成功。
+  コード表の結合、使用フラグ、整数セル、先頭ゼロ、重複・不正形式の拒否、
+  ヘッダーだけの表、オフライン時の取得禁止、コード表単独生成と再現性を確認した。
+- `uv run --offline python scripts/codegen.py --offline` と
+  `uv run --offline python scripts/codegen.py --offline --codes-only` を実行。
+  再生成前後の全パッケージPythonソースがバイト単位で一致した。
+- `uv run --offline ruff check` / `uv run --offline ruff format --check`：成功。
+- `uv run --offline pyright`：エラー0件・警告0件。
+- `uv run --offline pyright --verifytypes jmadantic --ignoreexternal`：100%。
+- `uv run --offline pytest -q`：801件成功、skip / xfailなし。
+  全テストのDNS・ソケット接続禁止ガードを有効にしたまま実行した。
+  公式サンプル546件のパーステストもstrict=Trueのまま成功。
+- 着手前後のSHA-256比較で、`tests/golden/` 30ファイル、録画フィード6ファイル、
+  公式サンプル素材547ファイルはすべて一致。
+  これらのディレクトリと `jmadantic/_generated/` にgit diffがないことも確認した。
+
+M4以降・M2bの実装、公開操作、git commitは行っていない。M3の作業をここで終了する。
