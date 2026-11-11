@@ -281,3 +281,72 @@ M3の実行結果：
   これらのディレクトリと `jmadantic/_generated/` にgit diffがないことも確認した。
 
 M4以降・M2bの実装、公開操作、git commitは行っていない。M3の作業をここで終了する。
+
+## M4 実装・検証結果（計画 a569071、2026-11-12）
+
+§3の状態管理と、§3.5に追加された分割区域の照会を実装した。
+
+実装内容：
+
+- `jmadantic/state/base.py` に共通Protocol、SkipReason、ApplyResult、ChangeType、
+  frozenなChangeと、情報単位・電文キーの記録を追加した。
+  スキップ理由は STATUS → UNSUPPORTED → DUPLICATE → STALE の順に判定する。
+  情報単位の新旧判定にはControl/DateTimeを使い、等しい時刻の未記録キーもSTALEとする。
+- `jmadantic/state/warning.py` にWarningState、frozenなCell・Riverを追加した。
+  VPWWのセルはReportDateTime、VPWS50の各グループはKind/DateTimeの最大値で更新する。
+  VPWS50に現れない既存グループは、全Kind/DateTimeの最大値W以下のセルだけを空にする。
+  Itemにない市町村は変更せず、Wより新しいセルは保持する。
+  解除後も空セルとas_ofを保持し、古い内容の復活を防ぐ。
+- 氾濫は対象HeadlineのKindとBody内のCityCodeから状態を作り、取消・コード10で河川を削除する。
+  種別集合の比較はname/codeで行い、Changeをscope・area・group順に返す。
+  種別が同じで対象市町村だけが変わった場合は、照会結果を更新するがChangeは出さない。
+- by_city、述語で種別を絞るcities、rivers、last_updatedを実装した。
+  last_updatedは全体の最大時刻ではなく、最後に適用した電文のControl/DateTimeを表す。
+  スキップでは更新しない。照会のMappingは読み取り専用のスナップショットとして返す。
+- version=1のJSONにセル・河川・受理Status・last_updated・最新時刻・電文キーを保存する。
+  電文キーは適用順に最大10,000件とし、古いものから捨てる。
+  情報単位の最新時刻は別に保持するので、記録から外れた古い電文もSTALEとして除外できる。
+  WarningKindはname/code/groupだけを保存し、読み込み時に再分類する。
+  datetimeはタイムゾーン付きISO 8601で保存・復元する。
+- Codeや必要な時刻の欠落など、更新根拠を作れない入力はValueErrorとし、状態・履歴を更新しない。
+  市町村等Warningが存在するのにWを決めるKind/DateTimeが全くない場合も、時刻を推測しない。
+  市町村等Warning自体がない場合は、計画指定のReportDateTimeによる全セル消去分岐を実装し、
+  人工入力で検証した。この形の実電文を新たに確認したという意味ではない。
+
+AREA_CITY_PARENT：
+
+- ローカルのmanifest登録済みコード表ZIPをSHA-256確認後に使用した。
+  `scripts/codegen.py` にAREA_CITY_PARENTの生成を追加し、166件を生成した。
+- 使用フラグを問わずAreaInformationCityの全コードを読み、下2桁が00でないコードについて、
+  同じシート内に親候補が存在する場合だけ対応を作る。存在しない親は補完しない。
+- 氾濫の照会だけに親対応を適用する。親コードの照会に子の気象セルを混ぜる逆方向の集約は行わない。
+  cities()も、河川が親コードを含む場合の分割区域を照会対象に含める。
+
+完了条件・関連検証の実行結果（Python 3.13.7 / Windows）：
+
+- `tests/test_golden.py` をREADMEのランナー要件どおり作成した。
+  ケースごとに新規状態を作り、各stepをstrict=Trueでパースして適用する。
+  expectに存在する項目だけを検査し、roundtrip_beforeではJSONの文字列一致も確認する。
+  全12ケースが成功した。期待値の変更やケース名・ファイル名による実装側の分岐はない。
+- `tests/test_warning_state.py` の27テストが成功。
+  指定のVXSU素材を適用後、0442101・0442102の両方でレベル２氾濫注意報を取得できる。
+  親へ気象セルを集約しないこと、照会フィルター、スキップ優先順位、同時刻、
+  独立情報単位、VPWS50のグループ時刻・全体W、空セルの永続化、履歴の上限、
+  受理Status設定の復元、無効入力で状態を壊さないことも確認した。
+- コード表生成テストに、親が同シートに存在することと使用フラグ非依存の検証を追加した。
+  公開辞書166件と大和町・薩摩川内市の対応も検証した。
+- `uv run --offline pytest -q`：842件成功、skip / xfailなし。
+  公式サンプル546件のstrict=Trueパースと、従来のM2・M3検証も成功した。
+  DNS・ソケット接続を禁止する共通ガードは有効のまま。
+- `uv run --offline ruff check` / `uv run --offline ruff format --check`：成功。
+- `uv run --offline pyright`：エラー0件・警告0件。
+- `uv run --offline pyright --verifytypes jmadantic --ignoreexternal`：100%。
+- `uv run --offline python scripts/codegen.py --offline --codes-only` を再実行し、
+  全パッケージPythonソースが生成前後でバイト単位で一致することを確認した。
+- 着手前後のSHA-256比較で、`tests/golden/` 30ファイル、録画フィード6ファイル、
+  公式サンプル素材547ファイルがすべて一致。
+  `git diff --exit-code -- tests/golden tests/data/feed tests/data/samples jmadantic/_generated`
+  も差分なし。
+
+気象庁へのアクセス、M2b・M5の実装、公開操作、git commitは行っていない。
+M4の作業をここで終了する。

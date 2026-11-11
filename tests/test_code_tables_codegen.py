@@ -6,7 +6,14 @@ from zipfile import ZipFile
 import pytest
 from openpyxl import Workbook
 
-from scripts.codegen import acquire, city_codes, generate_codes, main, river_codes
+from scripts.codegen import (
+    acquire,
+    city_codes,
+    city_parent_codes,
+    generate_codes,
+    main,
+    river_codes,
+)
 
 
 def workbook_bytes(book):
@@ -55,6 +62,17 @@ def test_city_join_respects_explicit_parents_flags_and_numeric_source_cells():
         "0110000": ("札幌市", "016010", "016010"),
         "2810700": ("神戸市須磨区", "280000", "280010"),
     }
+
+
+def test_city_parent_table_checks_all_source_codes_without_inventing_parents():
+    book = city_book()
+    sheet = book["AreaInformationCity"]
+    # A parent need not be used for weather warnings, and neither must a child.
+    sheet.append(["0442100", "parent", "parent", "", None, 0])
+    sheet.append(["0442101", "east", "east", "", "040011", 1])
+    sheet.append(["0442102", "west", "west", "", None, 0])
+    sheet.append(["9999901", "no parent", "no parent", "", None, 0])
+    assert city_parent_codes(workbook_bytes(book)) == {"0442101": "0442100", "0442102": "0442100"}
 
 
 @pytest.mark.parametrize("change", ["short-numeric-code", "missing-parent", "duplicate", "header"])
@@ -123,6 +141,7 @@ def test_generation_is_deterministic_and_only_contains_literal_dicts(tmp_path):
     generate_codes(archive, second)
     assert sorted(path.name for path in first.iterdir()) == [
         "_area_city.py",
+        "_area_city_parent.py",
         "_area_flood_forecast.py",
         "_area_water_level_warning.py",
     ]

@@ -25,6 +25,7 @@ from .parse import (
     VolcBody,
     parse,
 )
+from .state import ApplyResult, Cell, Change, ChangeType, River, SkipReason, State, WarningState
 
 __all__ = [
     "Body",
@@ -48,4 +49,12 @@ __all__ = [
     "rank",
     "stage_at_least",
     "parse",
+    "ApplyResult",
+    "Cell",
+    "Change",
+    "ChangeType",
+    "River",
+    "SkipReason",
+    "State",
+    "WarningState",
 ]

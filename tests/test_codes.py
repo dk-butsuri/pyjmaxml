@@ -1,7 +1,12 @@
 import ast
 from pathlib import Path
 
-from jmadantic.codes import AREA_CITY, AREA_FLOOD_FORECAST, AREA_WATER_LEVEL_WARNING
+from jmadantic.codes import (
+    AREA_CITY,
+    AREA_CITY_PARENT,
+    AREA_FLOOD_FORECAST,
+    AREA_WATER_LEVEL_WARNING,
+)
 
 
 def test_published_area_tables_and_leading_zeroes():
@@ -29,3 +34,17 @@ def test_runtime_package_does_not_import_spreadsheet_libraries():
                 assert all(alias.name.split(".")[0] != "openpyxl" for alias in node.names)
             if isinstance(node, ast.ImportFrom):
                 assert (node.module or "").split(".")[0] != "openpyxl"
+
+
+def test_published_city_parent_table():
+    assert len(AREA_CITY_PARENT) == 166
+    for child in ["0442101", "0442102"]:
+        assert AREA_CITY_PARENT[child] == "0442100"
+    for child in ["4621501", "4621502"]:
+        assert AREA_CITY_PARENT[child] == "4621500"
+    assert "0442100" not in AREA_CITY_PARENT
+    assert "0442199" not in AREA_CITY_PARENT
+    assert all(
+        child[-2:] != "00" and parent == child[:5] + "00"
+        for child, parent in AREA_CITY_PARENT.items()
+    )
