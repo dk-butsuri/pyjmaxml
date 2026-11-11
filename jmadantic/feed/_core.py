@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections import OrderedDict
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -16,8 +17,8 @@ from .._version import __version__
 
 _ATOM = "{http://www.w3.org/2005/Atom}"
 _FEED_BASE = "https://www.data.jma.go.jp/developer/xml/feed/"
-# Repository URL is pending; do not send the plan's placeholder as a real URL.
 _USER_AGENT = f"jmadantic/{__version__}"
+_LOGGER = logging.getLogger(__name__)
 
 
 class FeedKind(StrEnum):
@@ -58,7 +59,7 @@ class HttpResponse:
 
 
 class SeenStore(Protocol):
-    """Storage for IDs already returned by a poller; contains also counts as use."""
+    """Storage for acknowledged IDs; contains also counts as use."""
 
     def __contains__(self, entry_id: str, /) -> bool: ...
 
@@ -184,6 +185,7 @@ class FeedPoller:
         seen: SeenStore | None = None,
         min_interval: float | None = None,
         unsafe_min_interval: bool = False,
+        user_agent: str | None = None,
     ) -> None:
         default_interval = 3600 if long else 60
         interval = default_interval if min_interval is None else min_interval
@@ -191,10 +193,14 @@ class FeedPoller:
             raise ValueError("min_interval must be finite and nonnegative")
         if interval < default_interval and not unsafe_min_interval:
             raise ValueError("A shorter min_interval requires unsafe_min_interval=True")
+        if user_agent == "":
+            raise ValueError("user_agent must not be empty")
         suffix = "_l" if long else ""
         self._url = f"{_FEED_BASE}{kind.value}{suffix}.xml"
         self._min_interval = timedelta(seconds=interval)
         self._seen: SeenStore = seen if seen is not None else _LruSeenStore()
+        self._pending: OrderedDict[str, Entry] = OrderedDict()
+        self._user_agent = _USER_AGENT if user_agent is None else user_agent
         self._last_request_at: datetime | None = None
         self._etag: str | None = None
         self._last_modified: str | None = None
@@ -223,31 +229,41 @@ class FeedPoller:
         if resp.status == 304:
             self._etag = _header(resp.headers, "ETag") or self._etag
             self._last_modified = _header(resp.headers, "Last-Modified") or self._last_modified
-            return []
+            return list(self._pending.values())
         if resp.status != 200:
             raise HttpStatusError(resp.status)
         # Parse the entire response before committing IDs or cache validators.
         entries = _parse_entries(resp.body)
-        result: list[Entry] = []
         batch_ids: set[str] = set()
         for entry in entries:
             if entry.id in batch_ids:
                 continue
             batch_ids.add(entry.id)
-            if entry.id not in self._seen:
-                result.append(entry)
-                self._seen.add(entry.id)
+            if entry.id not in self._pending and entry.id not in self._seen:
+                self._pending[entry.id] = entry
+                if len(self._pending) > 1000:
+                    dropped_id, _ = self._pending.popitem(last=False)
+                    _LOGGER.warning("Pending entry limit (1000) exceeded; dropped %s", dropped_id)
         # A new representation without a validator invalidates its old value.
         self._etag = _header(resp.headers, "ETag")
         self._last_modified = _header(resp.headers, "Last-Modified")
-        return result
+        return list(self._pending.values())
+
+    def ack(self, entry: Entry | str) -> None:
+        """Record processing success, even if the ID is not currently pending.
+
+        Keep the entry pending if a user-provided seen store fails to record it.
+        Repeated acknowledgements are safe and refresh the default seen LRU.
+        """
+        entry_id = entry.id if isinstance(entry, Entry) else entry
+        self._seen.add(entry_id)
+        self._pending.pop(entry_id, None)
 
     def entry_request(self, entry: Entry) -> HttpRequest:
         """Return an unconditional GET for a report, without feed validators."""
         return HttpRequest("GET", entry.url, self._headers())
 
-    @staticmethod
-    def _headers() -> dict[str, str]:
+    def _headers(self) -> dict[str, str]:
         # Both adapters can accept identity. Avoid negotiating encodings that
         # urllib does not decode; a gzip XML body can still be passed to parse.
-        return {"User-Agent": _USER_AGENT, "Accept-Encoding": "identity"}
+        return {"User-Agent": self._user_agent, "Accept-Encoding": "identity"}

@@ -47,6 +47,8 @@ def test_recorded_200_304_then_new_entry():
     response = recorded("extra")
     entries = poller.handle_response(response, NOW + timedelta(seconds=1))
     assert len(entries) == 104
+    for entry in entries:
+        poller.ack(entry)
     second_request = poller.next_request(NOW + timedelta(seconds=60))
     assert second_request.headers["If-None-Match"] == response.headers["ETag"]
     assert second_request.headers["If-None-Match"].startswith('W/"')
@@ -164,24 +166,108 @@ def test_duplicate_ids_within_and_across_responses_and_injected_empty_store():
     poller = FeedPoller(FeedKind.EXTRA, seen=seen)
     response = HttpResponse(200, {}, feed("a", "a", "b", "a"))
     assert [entry.id for entry in poller.handle_response(response, NOW)] == ["a", "b"]
+    assert seen == set()
+    assert [entry.id for entry in poller.handle_response(response, NOW)] == ["a", "b"]
+    poller.ack("a")
+    poller.ack("b")
     assert seen == {"a", "b"}
     assert poller.handle_response(response, NOW) == []
     restarted = FeedPoller(FeedKind.EXTRA, seen=seen)
     assert restarted.handle_response(response, NOW) == []
 
 
-def test_default_store_is_bounded_lru_and_batch_duplicates_do_not_reappear():
+def test_default_acknowledged_store_is_bounded_lru():
     poller = FeedPoller(FeedKind.EXTRA)
-    ids = [str(number) for number in range(10_000)]
-    assert len(poller.handle_response(HttpResponse(200, {}, feed(*ids)), NOW)) == 10_000
+    for number in range(10_000):
+        poller.ack(str(number))
     # Refresh 0, so adding 10000 evicts 1 rather than 0.
     assert poller.handle_response(HttpResponse(200, {}, feed("0")), NOW) == []
-    poller.handle_response(HttpResponse(200, {}, feed("10000")), NOW)
+    poller.ack("10000")
     assert poller.handle_response(HttpResponse(200, {}, feed("0")), NOW) == []
     assert [e.id for e in poller.handle_response(HttpResponse(200, {}, feed("1")), NOW)] == ["1"]
-    other = FeedPoller(FeedKind.EXTRA)
-    batch = HttpResponse(200, {}, feed(*ids, "10000", "0"))
-    assert len(other.handle_response(batch, NOW)) == 10_001
+
+
+@pytest.mark.parametrize("status", [200, 304])
+def test_unacknowledged_entries_are_repeated_until_ack(status):
+    seen: set[str] = set()
+    poller = FeedPoller(FeedKind.EXTRA, seen=seen)
+    response = HttpResponse(200, {}, feed("a", "b"))
+    entries = poller.handle_response(response, NOW)
+    next_response = response if status == 200 else HttpResponse(304, {}, b"")
+    assert poller.handle_response(next_response, NOW) == entries
+    assert seen == set()
+    poller.ack(entries[0])
+    assert seen == {"a"}
+    assert poller.handle_response(next_response, NOW) == [entries[1]]
+    poller.ack("b")
+    assert poller.handle_response(next_response, NOW) == []
+    assert seen == {"a", "b"}
+
+
+def test_pending_survives_removal_from_feed_and_keeps_discovery_order():
+    poller = FeedPoller(FeedKind.EXTRA)
+    first = poller.handle_response(HttpResponse(200, {}, feed("b", "a")), NOW)
+    second = poller.handle_response(HttpResponse(200, {}, feed("c", "a", "c")), NOW)
+    assert [entry.id for entry in second] == ["b", "a", "c"]
+    assert second[:2] == first
+    assert poller.handle_response(HttpResponse(200, {}, feed()), NOW) == second
+    poller.ack("b")
+    assert [entry.id for entry in poller.handle_response(HttpResponse(304, {}, b""), NOW)] == [
+        "a",
+        "c",
+    ]
+
+
+def test_repeated_pending_id_preserves_first_entry_metadata():
+    poller = FeedPoller(FeedKind.EXTRA)
+    original = poller.handle_response(HttpResponse(200, {}, feed("a")), NOW)
+    root = ET.fromstring(feed("a"))
+    title = root.find(ATOM + "entry/" + ATOM + "title")
+    assert title is not None
+    title.text = "replacement"
+    assert poller.handle_response(HttpResponse(200, {}, ET.tostring(root)), NOW) == original
+
+
+def test_pending_limit_drops_oldest_without_ack_and_logs_warning(caplog):
+    seen: set[str] = set()
+    poller = FeedPoller(FeedKind.EXTRA, seen=seen)
+    ids = [str(number) for number in range(1002)]
+    with caplog.at_level("WARNING", logger="jmadantic.feed._core"):
+        result = poller.handle_response(HttpResponse(200, {}, feed(*ids, "0")), NOW)
+    assert [entry.id for entry in result] == ids[2:]
+    assert len(caplog.records) == 2
+    assert all(record.levelname == "WARNING" for record in caplog.records)
+    assert "dropped 0" in caplog.records[0].message
+    assert "dropped 1" in caplog.records[1].message
+    assert seen == set()
+    assert poller.handle_response(HttpResponse(304, {}, b""), NOW) == result
+
+
+def test_ack_unknown_and_repeated_ids_and_restarting_only_preserves_seen():
+    seen: set[str] = set()
+    poller = FeedPoller(FeedKind.EXTRA, seen=seen)
+    poller.ack("already-processed")
+    poller.ack("already-processed")
+    response = HttpResponse(200, {}, feed("already-processed", "unprocessed"))
+    result = poller.handle_response(response, NOW)
+    assert [entry.id for entry in result] == ["unprocessed"]
+    restarted = FeedPoller(FeedKind.EXTRA, seen=seen)
+    assert restarted.handle_response(HttpResponse(304, {}, b""), NOW) == []
+    assert restarted.handle_response(response, NOW) == result
+
+
+@pytest.mark.parametrize("user_agent", [None, "signage/1.0 (contact: operator@example.test)"])
+def test_default_and_custom_user_agent_for_feed_and_report(user_agent):
+    poller = FeedPoller(FeedKind.EXTRA, user_agent=user_agent)
+    entry = poller.handle_response(HttpResponse(200, {}, feed("a")), NOW)[0]
+    expected = f"jmadantic/{version('jmadantic')}" if user_agent is None else user_agent
+    assert poller.next_request(NOW).headers["User-Agent"] == expected
+    assert poller.entry_request(entry).headers["User-Agent"] == expected
+
+
+def test_empty_user_agent_is_rejected():
+    with pytest.raises(ValueError, match="user_agent"):
+        FeedPoller(FeedKind.EXTRA, user_agent="")
 
 
 @pytest.mark.parametrize("status", [204, 301, 400, 429, 500])

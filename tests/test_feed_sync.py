@@ -5,7 +5,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from feed_helpers import recorded
+from feed_helpers import feed, recorded
 
 from jmadantic import parse
 from jmadantic.feed import (
@@ -61,7 +61,11 @@ def test_recorded_poll_roundtrip_with_fake_transport():
     seen: set[str] = set()
     client = FeedClient(FeedKind.EXTRA, http=http, seen=seen, clock=lambda: next(times))
     entries = client.poll()
-    assert len(entries) == len(seen) == 104
+    assert len(entries) == 104
+    assert seen == set()
+    for entry in entries:
+        client.ack(entry)
+    assert len(seen) == 104
     assert client.poll() == []
     assert http.requests[1].headers["If-None-Match"] == response.headers["ETag"]
     assert http.requests[1].headers["If-Modified-Since"] == response.headers["Last-Modified"]
@@ -102,6 +106,72 @@ def test_transport_failure_propagates_without_immediate_retry():
     with pytest.raises(TooFrequentError):
         client.poll()
     assert len(http.requests) == 1
+
+
+@pytest.mark.parametrize("next_status", [200, 304])
+def test_failed_fetch_is_returned_by_next_poll(next_status):
+    response = HttpResponse(200, {}, feed("retry"))
+    following = response if next_status == 200 else HttpResponse(304, {}, b"")
+    http = FakeHttpClient([response, OSError("fetch failed"), following])
+    client = FeedClient(
+        FeedKind.EXTRA, http=http, clock=lambda: NOW, min_interval=0, unsafe_min_interval=True
+    )
+    entries = client.poll()
+    with pytest.raises(OSError, match="fetch failed"):
+        client.fetch(entries[0])
+    assert client.poll() == entries
+
+
+def test_successful_fetch_does_not_ack_and_explicit_ack_is_forwarded():
+    seen: set[str] = set()
+    http = FakeHttpClient(
+        [
+            HttpResponse(200, {}, feed("a")),
+            HttpResponse(200, {}, b"report"),
+            HttpResponse(304, {}, b""),
+            HttpResponse(304, {}, b""),
+        ]
+    )
+    client = FeedClient(
+        FeedKind.EXTRA,
+        seen=seen,
+        http=http,
+        clock=lambda: NOW,
+        min_interval=0,
+        unsafe_min_interval=True,
+    )
+    entries = client.poll()
+    assert client.fetch(entries[0]) == b"report"
+    assert seen == set()
+    assert client.poll() == entries
+    client.ack(entries[0])
+    assert seen == {"a"}
+    assert client.poll() == []
+
+
+def test_ack_is_a_direct_bridge_without_clock_or_transport():
+    http = FakeHttpClient([])
+
+    def no_clock():
+        raise AssertionError("ack must not read the clock")
+
+    client = FeedClient(FeedKind.EXTRA, http=http, clock=no_clock)
+    with patch.object(FeedPoller, "ack", autospec=True) as ack:
+        client.ack(ENTRY)
+        assert ack.call_args.args[1:] == (ENTRY,)
+        client.ack(ENTRY.id)
+        assert ack.call_args.args[1:] == (ENTRY.id,)
+    assert http.requests == []
+
+
+def test_user_agent_option_reaches_both_request_types():
+    http = FakeHttpClient([HttpResponse(200, {}, feed("a")), HttpResponse(200, {}, b"body")])
+    client = FeedClient(FeedKind.EXTRA, http=http, clock=lambda: NOW, user_agent="operator/2.0")
+    entry = client.poll()[0]
+    client.fetch(entry)
+    assert [req.headers["User-Agent"] for req in http.requests] == ["operator/2.0"] * 2
+    with pytest.raises(ValueError, match="user_agent"):
+        FeedClient(FeedKind.EXTRA, http=http, user_agent="")
 
 
 @pytest.mark.parametrize("compressed", [False, True])
@@ -150,9 +220,9 @@ def test_poll_and_fetch_contain_only_bridging_without_branches():
     methods = [
         node
         for node in ast.walk(tree)
-        if isinstance(node, ast.FunctionDef) and node.name in {"poll", "fetch"}
+        if isinstance(node, ast.FunctionDef) and node.name in {"poll", "fetch", "ack"}
     ]
-    assert len(methods) == 2
+    assert len(methods) == 3
     assert not any(
         isinstance(node, (ast.If, ast.IfExp, ast.Try, ast.Match, ast.For, ast.While))
         for method in methods

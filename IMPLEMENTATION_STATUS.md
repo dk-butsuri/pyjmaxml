@@ -145,3 +145,74 @@ M2 の完了条件を実行した結果（Python 3.13.7 / Windows）：
   `git diff --exit-code -- tests/golden tests/data/feed tests/data/samples` も差分なし。
 
 M2b、M3以降、公開操作、git commit は行っていない。ここで作業を停止する。
+
+## M2 手直し：ack と User-Agent（計画 e2556c2、2026-11-12）
+
+実装済み。既読IDの記録を返却時から `ack(Entry | str)` 時に変更した。
+FeedPoller は未処理を発見順に保持し、200でも304でも全未処理を返す。
+フィードから消えた未処理も保持する。上限1,000件を超えると古いものから破棄して
+warning を出す。未処理は永続化しない。FeedClient.ack は中核への直接の橋渡しとし、
+fetch は成功・失敗にかかわらず ack しない。
+
+User-Agent は既定 `jmadantic/<version>`、`user_agent` で上書き可能にした。
+空文字を拒否し、フィード・電文本体の両方に指定値を付ける。
+リポジトリURLは計画から削除されたため、従来のURL保留事項は解消した。
+README に処理成功後の ack、未処理の保持・上限・再起動時の扱いを記載した。
+
+M2 完了条件の実行結果（M3 着手前、Python 3.13.7 / Windows）：
+
+- `uv run --offline pytest tests/test_feed_core.py tests/test_feed_sync.py tests/test_feed_http.py -q`
+  ：84件成功。追加された ack の全ケース、User-Agent の既定値・上書き・空文字、
+  fetch失敗後の再返却と成功時の非ackを検証した。
+- 禁止 import / 時計呼び出しの AST 検査、同期層の poll / fetch / ack が
+  分岐を持たないことの検査：上記テスト内で成功。
+- 全テストで DNS 解決・ソケット接続を禁止する既存ガードを有効にしたまま、
+  録画素材・偽HTTP・httpx MockTransportだけを使用。気象庁へのアクセスなし。
+- `uv run --offline pytest -q`：671件成功、skip / xfail なし。
+  公式サンプル546件はすべて既存の `strict=True` で成功。
+- `uv run --offline ruff check` / `uv run --offline ruff format --check`：成功。
+- `uv run --offline pyright`：エラー0件・警告0件。
+- `uv run --offline pyright --verifytypes jmadantic --ignoreexternal`：100%。
+- `git diff --exit-code -- tests/golden tests/data/feed tests/data/samples`：差分なし。
+- git commit、M2b、M4以降の実装は行っていない。次にM3のローカル資料を調査する。
+
+## M3 調査時の停止記録（計画 e2556c2、2026-11-12）
+
+M2の手直しの実装・検証・記録を完了した後に調査を開始した。
+コード表の配布物はローカルに存在し、manifest の SHA-256 と一致することを確認した。
+
+- `vendor/jmaxml_20261110_Code.zip`：
+  `54e287e84c0f15a2ad2227dee8cb6040fdb697b0f5bd40a5affdf18ba69931e2`
+- `vendor/jmaxml_20261110_code.xlsx`：
+  `2ae15e0aa552b89469fcc286810b7d431a65681898d84d53f3eb46bbd7940f53`
+
+ただし、コード生成・正規化の実装前に、分類仕様と完了条件の不整合が見つかったため停止した。
+
+確認した事実：
+
+- M3 は `classify_mete(code, name)` を §0.6 の表から作ると指定し、未知コードは
+  `element=UNKNOWN, stage=None` とする。一方で完了条件は、サンプルと
+  `tests/golden/_shared/` の Kind/Code（00・「なし」以外）をすべて UNKNOWN 以外に分類すること。
+- 既存の `tests/data/samples/15_11_02_150916_VPWW54.xml` には
+  `04: 洪水警報` と `18: 洪水注意報` が実在する。
+  旧形式の他の VPWW50 / VPWW53 サンプルにも同じコードがある。
+- これらのコードは §0.6 の表に存在しない。
+  また、`WarningKind.group` として指定されている VPWW55〜61 / VXKO / VXSU のどれを
+  旧形式の市町村向け洪水警報・注意報に割り当てるのかは定義されていない。
+  `classify_flood` の VXKO / VXSU は指定河川洪水予報・水位周知河川の分類であり、
+  それらと旧形式の市町村向け洪水警報を同じものとして扱う根拠は計画にない。
+
+必要な仕様判断：
+
+- M3の全件分類条件を、指定された分類表が扱う電文・Kindに限定するのか、
+  または旧形式の洪水コードも正規化対象に含めて group 等の対応を追加定義するのか。
+- 対象除外、コードの追加、独自の group の作成は、いずれも行っていない。
+
+M3の実行結果：
+
+- 調査のみ。コード生成・正規化は未実装で、全件分類テストも未作成・未実行。
+  M3 の完了条件は未達。
+- 気象庁へのアクセス、`tests/golden/` や録画フィード・公式サンプルの変更は行っていない。
+- M2b、M4以降、git commit は行っていない。
+
+依頼の停止条件に従い、この未確定点を記録して作業を停止する。

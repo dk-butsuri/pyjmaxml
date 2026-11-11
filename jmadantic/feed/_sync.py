@@ -26,6 +26,7 @@ class FeedClient:
         clock: Callable[[], datetime] | None = None,
         min_interval: float | None = None,
         unsafe_min_interval: bool = False,
+        user_agent: str | None = None,
     ) -> None:
         self._poller = FeedPoller(
             kind,
@@ -33,6 +34,7 @@ class FeedClient:
             seen=seen,
             min_interval=min_interval,
             unsafe_min_interval=unsafe_min_interval,
+            user_agent=user_agent,
         )
         self._http = http if http is not None else UrllibHttpClient()
         self._clock = clock if clock is not None else _utc_now
@@ -45,3 +47,6 @@ class FeedClient:
     def fetch(self, entry: Entry) -> bytes:
         request = self._poller.entry_request(entry)
         return entry_response(self._http.send(request))
+
+    def ack(self, entry: Entry | str) -> None:
+        self._poller.ack(entry)
