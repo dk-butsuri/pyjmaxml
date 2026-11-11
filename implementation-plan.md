@@ -224,7 +224,11 @@ I/O を持たない中核（`FeedPoller`）と、通信だけを担当する薄�
    - 未知のコードは例外にせず、`element=UNKNOWN, stage=None` にして `logging` で warning を出す
    - 述語：`Predicate` は `Callable[[WarningKind], bool]` をラップしたクラスで、`&`・`|`・`~` が使える。`level_at_least(n)`、`stage_at_least(stage)`、`element_in(*elements)` を用意する
    - `rank(kind) -> tuple[int, int]` ＝ `(stage の値 または -1, level または 0)`
-- **完了条件**：サンプルと `tests/golden/_shared/` に出てくる Kind/Code（00 と「なし」を除く）がすべて UNKNOWN 以外に分類される。これをテストにする
+- **完了条件**：WarningState が扱う電文の Kind/Code が、すべて UNKNOWN 以外に分類される。これをテストにする
+  - 対象の電文：`data_type_code` が VPWW55〜61・VPWS50・VXKO・VXSU のもの（`tests/data/samples/` と `tests/golden/` の両方）。2026-11-12 時点で46ファイル、コード31種類。表にないコードはない（確認済み）
+  - 対象の Kind：気象は `Body/Warning[@type="気象警報・注意報（市町村等）"]/Item/Kind`、氾濫は §0.7 の Headline の Kind。Code がない Kind（「なし」）は除く
+  - 気象の 00 と氾濫の 10 は「解除」として分類できればよい
+  - **旧形式の電文（VPWW50/53/54 など）は対象外**。そこに出てくる 04 洪水警報・18 洪水注意報などは、§0.6 の表にないので UNKNOWN のままでよい（WarningState はこれらの電文を UNSUPPORTED として捨てるので、分類されることはない）
 
 ### M4. 状態管理
 §3 の設計どおりに実装する。
