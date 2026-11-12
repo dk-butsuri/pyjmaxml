@@ -2,6 +2,9 @@
 
 ## 0.1.0（公開準備中）
 
+- 区域名・都道府県名で警報・予報を参照する `Tracker` / `AsyncTracker`、不変な区域・府県の写し。
+- 公式コード表から生成した1,805区域の `AreaName` と47都道府県の `Prefecture` Literal 型。
+
 - 気象庁防災情報XMLの型付きパース、gzip入力、未知のBodyの保持。
 - PULL型フィードの条件付きGET、未処理の再返却（`updated` の古い順）、明示的なack。
 - `AsyncFeedClient`（非同期クライアント、同時リクエスト数の上限つき）と `HttpxAsyncHttpClient`。
@@ -11,6 +14,7 @@
 - VPWS50の「発表なし」を時刻つきで保持し、遅れて届いた古い電文による警報の復活を防止。
 - `apply(now=...)` で古すぎる・未来すぎる電文を破棄。判定の基準は変更・無効化可能。
 - VPFD60・VPFD61・VPFW60（警報級の可能性）を区域・要素・時間帯ごとに展開する `warning_possibility()`。
+- VPWP50（気象警報・注意報時系列情報）を市町村・Local・値の種類・時間帯ごとに展開する `warning_timeseries()`。
 - VPFD50・VPFD51・VPFW50（府県天気予報・府県週間天気予報）を区域または地点・要素・時間帯ごとに展開する
   `weather_forecast()`。
 - VXSE51・VXSE52・VXSE53（震度速報・震源に関する情報・震源・震度に関する情報）を、震源・マグニチュードと

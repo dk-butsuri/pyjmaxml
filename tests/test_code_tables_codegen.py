@@ -8,12 +8,20 @@ from openpyxl import Workbook
 
 from scripts.codegen import (
     acquire,
+    area_names,
     city_codes,
     city_parent_codes,
     generate_codes,
     main,
     river_codes,
 )
+
+PREFECTURES = (
+    "北海道 青森県 岩手県 宮城県 秋田県 山形県 福島県 茨城県 栃木県 群馬県 埼玉県 千葉県 "
+    "東京都 神奈川県 新潟県 富山県 石川県 福井県 山梨県 長野県 岐阜県 静岡県 愛知県 "
+    "三重県 滋賀県 京都府 大阪府 兵庫県 奈良県 和歌山県 鳥取県 島根県 岡山県 広島県 "
+    "山口県 徳島県 香川県 愛媛県 高知県 福岡県 佐賀県 長崎県 熊本県 大分県 宮崎県 鹿児島県 沖縄県"
+).split()
 
 
 def workbook_bytes(book):
@@ -118,10 +126,28 @@ def test_invalid_river_table_is_rejected(rows):
         river_codes(workbook_bytes(river_book(rows=rows)), "AreaFloodForecast", 12)
 
 
+def complete_city_book():
+    book = city_book()
+    city = book["AreaInformationCity"]
+    city["B4"] = "北海道札幌市"
+    city["B6"] = "兵庫県神戸市須磨区"
+    relation = book["AreaForecastLocalM（関係表　警報・注意報"]
+    for index, name in enumerate(PREFECTURES, 1):
+        if index in (1, 28):
+            continue
+        prefix = f"{index:02}"
+        city.append([prefix + "10000", name + "区域", "区域", "", prefix + "0001", 1])
+        relation.append(
+            [prefix + "0001", "group", prefix + "0010", "primary", prefix + "0000", name]
+        )
+    return book
+
+
 def code_archive(path):
     with ZipFile(path, "w") as archive:
         archive.writestr(
-            "20261019_AreaInformationCity-AreaForecastLocalM.xlsx", workbook_bytes(city_book())
+            "20261019_AreaInformationCity-AreaForecastLocalM.xlsx",
+            workbook_bytes(complete_city_book()),
         )
         archive.writestr(
             "20260806_AreaFloodForecast.xlsx",
@@ -143,16 +169,42 @@ def test_generation_is_deterministic_and_only_contains_literal_dicts(tmp_path):
         "_area_city.py",
         "_area_city_parent.py",
         "_area_flood_forecast.py",
+        "_area_name.py",
         "_area_water_level_warning.py",
     ]
     for path in first.iterdir():
         assert path.read_bytes() == (second / path.name).read_bytes()
         tree = ast.parse(path.read_text(encoding="utf-8"))
-        assert len(tree.body) == 1
-        assignment = tree.body[0]
-        assert isinstance(assignment, ast.AnnAssign) and assignment.value is not None
-        assert isinstance(ast.literal_eval(assignment.value), dict)
+        if path.name == "_area_name.py":
+            assert isinstance(tree.body[0], ast.ImportFrom)
+            assert tree.body[0].module == "typing"
+            aliases = [node for node in tree.body if isinstance(node, ast.Assign)]
+            assert len(aliases) == 2
+            for alias in aliases:
+                assert isinstance(alias.value, ast.Subscript)
+                assert isinstance(alias.value.value, ast.Name)
+                assert alias.value.value.id == "Literal"
+                assert all(isinstance(value, str) for value in ast.literal_eval(alias.value.slice))
+            assignments = [node for node in tree.body if isinstance(node, ast.AnnAssign)]
+            assert len(assignments) == 4
+            assert len(tree.body) == 7
+        else:
+            assert len(tree.body) == 1
+            assignments = tree.body
+        for assignment in assignments:
+            assert isinstance(assignment, ast.AnnAssign) and assignment.value is not None
+            if path.name == "_area_name.py" and isinstance(assignment.value, ast.DictComp):
+                assert isinstance(assignment.target, ast.Name)
+                assert assignment.target.id in {"AREA_CODE_BY_NAME", "AREAS_BY_PREFECTURE"}
+            else:
+                assert isinstance(ast.literal_eval(assignment.value), dict)
         assert hashlib.sha256(archive.read_bytes()).hexdigest() in path.read_text(encoding="utf-8")
+        if path.name == "_area_name.py":
+            namespace = {}
+            exec(compile(tree, str(path), "exec"), namespace)
+            names = namespace["AREA_NAME_BY_CODE"]
+            assert namespace["AREA_CODE_BY_NAME"] == {name: code for code, name in names.items()}
+            assert sum(map(len, namespace["AREAS_BY_PREFECTURE"].values())) == len(names)
 
 
 def test_offline_mode_fails_before_trying_to_download(tmp_path, monkeypatch):
@@ -187,3 +239,49 @@ def test_offline_codes_only_cli_uses_verified_cache_without_xsdata(tmp_path, mon
     monkeypatch.setattr("scripts.codegen.subprocess.run", forbidden)
     main()
     assert (tmp_path / "pyjmaxml/codes/_area_city.py").is_file()
+
+
+def test_area_names_preserve_split_parent_and_code_order():
+    book = complete_city_book()
+    city = book["AreaInformationCity"]
+    city.append(["2020100", "長野県長野市", "長野市", "", None, 0])
+    city.append(["2020111", "分割区域", "長野", "", "200001", 1])
+    city.append(["2020112", None, "鬼無里戸隠", "", "200001", 1])
+    names, prefectures = area_names(workbook_bytes(book))
+    assert names["2020111"] == "長野県長野市（長野）"
+    assert names["2020112"] == "長野県長野市（鬼無里戸隠）"
+    assert names["0110000"] == "北海道札幌市"
+    assert names["2810700"] == "兵庫県神戸市須磨区"
+    assert list(names) == sorted(names)
+    assert list(prefectures) == PREFECTURES
+
+
+@pytest.mark.parametrize(
+    "case", ["region", "name", "duplicate", "pref-prefix", "prefix-pref", "count"]
+)
+def test_invalid_area_names_fail_generation_before_writing(tmp_path, case):
+    book = complete_city_book()
+    city = book["AreaInformationCity"]
+    if case == "region":
+        city["B4"] = "札幌市"
+    elif case == "name":
+        city["C4"] = None
+    elif case == "duplicate":
+        city.append(["0110200", "北海道札幌市", "札幌市", "", "016012", 1])
+    elif case == "pref-prefix":
+        city["B7"] = "北海道別区域"  # Prefix 02 cannot also be 北海道.
+    elif case == "prefix-pref":
+        city.append(["0110200", "青森県別区域", "別区域", "", "016012", 1])
+    else:
+        city["F7"] = 0
+    archive = code_archive(tmp_path / "codes.zip")
+    with ZipFile(archive) as source:
+        members = {name: source.read(name) for name in source.namelist()}
+    members["20261019_AreaInformationCity-AreaForecastLocalM.xlsx"] = workbook_bytes(book)
+    with ZipFile(archive, "w") as target:
+        for name, content in members.items():
+            target.writestr(name, content)
+    destination = tmp_path / "generated"
+    with pytest.raises(ValueError):
+        generate_codes(archive, destination)
+    assert not destination.exists()

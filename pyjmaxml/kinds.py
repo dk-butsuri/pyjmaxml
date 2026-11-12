@@ -8,6 +8,8 @@ https://xml.kishou.go.jp/jmaxml_20260806_format_v1_3_hyo1_1.pdf
 
 from .parse import Report
 
+__all__ = ["data_type_code"]
+
 _TITLE_CODES: dict[str, str] = {
     "アジア太平洋地上実況図": "VZSA60",
     "アジア太平洋海上悪天２４時間予想図": "VZSF60",
@@ -115,10 +117,15 @@ _TITLE_CODES: dict[str, str] = {
 }
 
 
+def code_from_title(title: str) -> str | None:
+    """Share the exact Control/Atom title correspondence with the tracker."""
+    return _TITLE_CODES.get(title)
+
+
 def data_type_code(report: Report) -> str | None:
     """Return a title-based code; river families use VXKO/VXSU.
 
     Unknown titles and titles shared by multiple numbered products return
     None. Fullwidth characters are matched exactly without normalization.
     """
-    return _TITLE_CODES.get(report.control.title)
+    return code_from_title(report.control.title)

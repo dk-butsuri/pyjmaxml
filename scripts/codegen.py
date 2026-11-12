@@ -8,6 +8,7 @@ import hashlib
 import importlib.metadata
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -150,6 +151,82 @@ def city_parent_codes(data: bytes) -> dict[str, str]:
         book.close()
 
 
+def area_names(data: bytes) -> tuple[dict[str, str], dict[str, str]]:
+    """Name warning areas without collapsing split municipalities."""
+    cities = city_codes(data)
+    parents = city_parent_codes(data)
+    book = load_workbook(BytesIO(data), read_only=True, data_only=False)
+    try:
+        rows: dict[str, tuple[object, object]] = {}
+        for row in book["AreaInformationCity"].iter_rows(min_row=4, max_col=3, values_only=True):
+            if row[0] is None:
+                continue
+            code = _code(row[0], 7)
+            if code in rows:
+                raise ValueError(f"Duplicate area row: {code}")
+            rows[code] = (row[1], row[2])
+        names: dict[str, str] = {}
+        prefectures: dict[str, str] = {}
+        prefixes: dict[str, str] = {}
+        for code in sorted(cities):
+            if code not in rows:
+                raise ValueError(f"Missing area row: {code}")
+            parent = parents.get(code)
+            region, name = rows[parent or code]
+            match = re.match(r"^(北海道|東京都|大阪府|京都府|.{2,3}県)", _name(region))
+            if match is None:
+                raise ValueError(f"Missing prefecture name for area {code}: {region!r}")
+            prefecture = match[1]
+            full_name = prefecture + _name(name)
+            if parent is not None:
+                full_name += "（" + _name(rows[code][1]) + "）"
+            if full_name in names.values():
+                raise ValueError(f"Duplicate area name: {full_name}")
+            names[code] = full_name
+            prefix = code[:2]
+            if prefectures.get(prefecture, prefix) != prefix:
+                raise ValueError(f"Prefecture has multiple code prefixes: {prefecture}")
+            if prefixes.get(prefix, prefecture) != prefecture:
+                raise ValueError(f"Code prefix has multiple prefectures: {prefix}")
+            prefectures[prefecture] = prefix
+            prefixes[prefix] = prefecture
+        if names.keys() != cities.keys() or len(names) != len(cities):
+            raise ValueError("Area names do not cover all weather-warning areas")
+        if len(prefectures) != 47:
+            raise ValueError(f"Expected 47 prefectures, got {len(prefectures)}")
+        return names, dict(sorted(prefectures.items(), key=lambda item: item[1]))
+    finally:
+        book.close()
+
+
+def area_name_module(data: bytes, header: str) -> str:
+    names, prefectures = area_names(data)
+
+    def quote(value: str) -> str:
+        return json.dumps(value, ensure_ascii=False)
+
+    lines = [header, "\nfrom typing import Literal\n\nAreaName = Literal[\n"]
+    lines.extend(f"    {quote(name)},\n" for name in names.values())
+    lines.append("]\n\nAREA_NAME_BY_CODE: dict[str, AreaName] = {\n")
+    lines.extend(f"    {quote(code)}: {quote(name)},\n" for code, name in names.items())
+    lines.append(
+        "}\n\nAREA_CODE_BY_NAME: dict[AreaName, str] = "
+        "{name: code for code, name in AREA_NAME_BY_CODE.items()}\n\n"
+        "Prefecture = Literal[\n"
+    )
+    lines.extend(f"    {quote(name)},\n" for name in prefectures)
+    lines.append("]\n\nPREFECTURE_CODE: dict[Prefecture, str] = {\n")
+    lines.extend(f"    {quote(name)}: {quote(code)},\n" for name, code in prefectures.items())
+    lines.append(
+        "}\n\nAREAS_BY_PREFECTURE: dict[Prefecture, tuple[AreaName, ...]] = {\n"
+        "    prefecture: tuple(name for code, name in AREA_NAME_BY_CODE.items() "
+        "if code.startswith(prefix))\n"
+        "    for prefecture, prefix in PREFECTURE_CODE.items()\n"
+        "}\n"
+    )
+    return "".join(lines)
+
+
 def generate_codes(archive: Path, destination: Path) -> None:
     """Generate deterministic dict constants from the verified code archive."""
     with ZipFile(archive) as source:
@@ -192,6 +269,8 @@ def generate_codes(archive: Path, destination: Path) -> None:
             if not values:
                 lines = [header, f"\n{constant}: dict[str, {value_type}] = {{}}\n"]
             outputs[filename] = "".join(lines)
+            if constant == "AREA_CITY":
+                outputs["_area_name.py"] = area_name_module(data, header)
             print(f"{constant}: {len(values)} entries")
         # Validate all tables before writing any generated module.
         destination.mkdir(parents=True, exist_ok=True)

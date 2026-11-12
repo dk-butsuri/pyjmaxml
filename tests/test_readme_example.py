@@ -22,7 +22,11 @@ from pyjmaxml.feed import (
 ROOT = Path(__file__).parents[1]
 SAMPLE = ROOT / "tests/data/samples/15_16_03_241226_VPWW55.xml"
 README = (ROOT / "README.md").read_text(encoding="utf-8")
-BLOCK = README.split("```python\n", 1)[1].split("```", 1)[0]
+BLOCK = next(
+    block.split("```", 1)[0]
+    for block in README.split("```python\n")[1:]
+    if "def update_once(client: FeedClient" in block.split("```", 1)[0]
+)
 
 
 class FakeHttp:
@@ -152,6 +156,49 @@ def test_script_only_supplies_current_time_online(monkeypatch, offline):
         assert before <= supplied_now <= datetime.now(UTC)
         assert not state.by_city("0121400")
     assert seen == {"sample"}  # Time-rejected reports are also acknowledged.
+
+
+def test_readme_tracker_examples_run_offline(monkeypatch, capsys):
+    from tracker_helpers import BASE, WARNING, FakeHttp, atom_entries
+
+    from pyjmaxml import Tracker, parse
+
+    blocks = [
+        block.split("```", 1)[0]
+        for block in README.split("```python\n")[1:]
+        if "from pyjmaxml import Tracker" in block.split("```", 1)[0]
+    ]
+    assert len(blocks) == 2
+    for block in blocks:
+        http = FakeHttp()
+        entry = http.document(WARNING, "011000")
+        http.queue(BASE + "extra.xml", atom_entries(entry))
+        monkeypatch.setattr(
+            "pyjmaxml.Tracker",
+            lambda *a, http=http, **kw: Tracker(
+                *a, **kw, http=http, clock=lambda: parse(WARNING).control.date_time
+            ),
+        )
+        namespace = {}
+        exec(compile(block, "README.md", "exec"), namespace)
+        assert namespace["tracker"].updated_at is not None
+        assert not namespace["result"].errors
+        # The sample's Hokkaido warning is filtered when watching Osaka/Nagano.
+        assert http.counts[entry.url] == 0
+    assert "出典：気象庁ホームページ" in capsys.readouterr().out
+
+
+def test_tracker_example_script_runs_offline(monkeypatch, capsys):
+    spec = importlib.util.spec_from_file_location("track_areas", ROOT / "examples/track_areas.py")
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    monkeypatch.setattr("sys.argv", ["track_areas", "--offline-sample"])
+    module.main()
+    output = capsys.readouterr().out
+    assert "現在の発表状況ではありません" in output
+    assert "北海道稚内市" in output
+    assert "大雨" in output
 
 
 ASYNC_BLOCK = next(

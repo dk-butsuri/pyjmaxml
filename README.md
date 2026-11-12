@@ -28,7 +28,81 @@ python -m pip install '.[httpx]'
 既定の通信は標準ライブラリのurllibを使います。実行時の依存はxsdataとlxmlです。
 コード表は同梱され、実行時にopenpyxlやコード表のダウンロードは必要ありません。
 
-## フィードから市町村の警報を表示する
+## Tracker で区域名から見る
+
+`Tracker` は警報・天気予報・警報級の可能性・警報時系列を区域名で参照する入口です。
+次の例は気象庁にアクセスして1回更新します。
+
+```python
+from pyjmaxml import Tracker
+
+tracker = Tracker(["大阪府枚方市", "長野県長野市（鬼無里戸隠）"], user_agent="my-signage/1.0")
+result = tracker.update()
+hirakata = tracker.area("大阪府枚方市")
+print(hirakata.name, sorted(kind.name for kind in hirakata.warnings))
+for error in result.errors:
+    print("取得失敗:", error)
+print("出典：気象庁ホームページ（https://xml.kishou.go.jp/xmlpull.html）")
+print("気象庁の防災情報XMLを、このサンプルの実行者が加工して作成")
+```
+
+区域名は公式コード表から生成した `AreaName`（1,805件の文字列 Literal）です。
+分割されていない区域は「都道府県名 + 区域名」、分割された区域は
+「都道府県名 + 親市町村名 + （区域名）」で指定します。
+例えば `大阪府枚方市`、`兵庫県神戸市東灘区`、`長野県長野市（長野）`、
+`長野県長野市（鬼無里戸隠）`、`神奈川県横浜市（横浜市北部）` です。
+分割された区域は別々に指定します。親市町村への集約や省略形の検索は行いません。
+pyright や対応エディタで名前の誤入力を検出でき、実行時にも検証します。
+
+府県内すべての区域を見る場合は `prefectures=` を使います。府県名も `Prefecture` の Literal 型です。
+北海道は7つの府県予報区を合わせて「北海道」1件として指定します。
+
+```python
+from pyjmaxml import Tracker
+
+tracker = Tracker(prefectures=["大阪府"], user_agent="my-signage/1.0")
+result = tracker.update()
+for view in tracker.prefecture("大阪府").warned():
+    print(view.name, sorted(kind.name for kind in view.warnings))
+```
+
+`prefecture().areas` は府県内すべての区域、`warned()` は警報・注意報がある区域の写しです。
+`areas=` と `prefectures=` は併用でき、重複はまとめます。
+`prefecture()` は `prefectures=` で指定した府県だけを返します。
+区域コード順の `tracker.areas` と `AreaView`・`PrefectureView` は、更新後も取得済みの写しが変化しません。
+
+`AreaView` には `warnings`、`forecast`（VPFD51）、`weekly_forecast`（VPFW50）、
+`possibility`（VPFD60）、`possibility_early`（VPFD61）、`possibility_weekly`（VPFW60）、
+`timeseries`（VPWP50）があります。電文を受け取っていない項目は空です。
+`tracker.earthquake` は最新の地震情報（VXSE51〜53）、未受信時は `None` です。
+
+`update()` は **60秒以上空けて**呼んでください。待機・自動再試行は行いません。
+最初の更新だけ EXTRA・REGULAR の長期フィードを読み、その後は通常フィードを読みます。
+長期フィードの取得に失敗した場合（ネットワークにつながる前に起動したときなど）は、
+最小間隔の1時間がたった後の更新で読み直します。それまでの待ちは `result.errors` に入りません。
+見ている区域の都道府県に対応する電文だけを取得しますが、全国集約の VPWS50、
+河川の VXKO・VXSU と地震は都道府県で絞りません。
+`result.changes` は見ている区域の警報の差分、`result.applied` は使用した電文数、
+`result.errors` はフィード・電文の取得エラーです。取得失敗は未ackのまま次の更新で再取得し、
+他のフィードの処理は続けます。解析・適用できない電文はログに残してackします。
+`updated_at` は最後に `update()` が戻った時刻（UTC）で、取得エラーの有無は `errors` で確認します。
+
+空の結果だけで現在「警報なし」と判断することはできません。
+再起動すると状態は消えます。警報の状態を保存する場合は `tracker.warning_state.to_json()` を使えます。
+Tracker 自体の保存・復元機能はありません。
+非同期版は `AsyncTracker` で、`await tracker.update()`・`await tracker.aclose()` と `async with` に対応します。
+既定の非同期通信には `pyjmaxml[httpx]` が必要です。
+[出典表示と利用上の注意](#出典表示と利用上の注意)も参照してください。
+
+通信せずに使える実行例は [examples/track_areas.py](examples/track_areas.py) にあります。
+
+```sh
+python examples/track_areas.py --offline-sample
+```
+
+## 低レベルな API
+
+### フィードから市町村の警報を表示する
 
 次は1回ポーリングし、取得・解析・状態への適用後にackする例です。
 実行すると気象庁にアクセスします。
@@ -252,6 +326,31 @@ VPFW50の区域は一次細分区域より粗いことがあります（鹿児�
 `by_city()` は一次細分区域、府県予報区、上位区域（上3桁＋000）の順に探します。
 VPFW50の「７日間平年値」（降水量の階級閾値）は時系列ではないため展開しません。
 `Control/Status` は確認しません。
+
+### 気象警報・注意報の予想時系列
+
+`warning_timeseries(report)` は、regular フィードで配信される VPWP50 を、
+市町村・Local（陸上・海上など）・値の種類・時間帯ごとの `WarningTimeSeriesCell` に展開します。
+**発表中の警報を表すものではありません。** 発表状況の管理には `WarningState` を使います。
+危険度は電文の `code`・`text` をそのまま返し、レベルには変換しません。
+
+```python
+from pathlib import Path
+
+from pyjmaxml import parse, warning_timeseries
+
+report = parse(Path("tests/data/timeseries/20261112075708_0_VPWP50_473000.xml"))
+result = warning_timeseries(report)
+for cell in result.by_city("4721400"):  # 宮古島市。市町村等コードの完全一致
+    if cell.property == "波危険度":
+        print(cell.start, cell.duration, cell.local, cell.code, cell.text, cell.notes)
+```
+
+数値は `number`、風向と危険度の名称は `text` に入り、値なしの数値は `None` になります。
+`property` は Property/Type、`label` は値の種類で、高潮の「うちあげ高水位」と「潮位」も区別します。
+`unit`・`condition`・`description` と、Part 全体への注記 `notes` を保持します。
+`by_city()` は親区域への検索を行いません。状態管理や `Control/Status` の確認は行わず、
+訓練・試験の電文の除外は呼び出し側で行います。
 
 ### 地震情報
 

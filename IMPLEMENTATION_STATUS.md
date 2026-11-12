@@ -623,3 +623,154 @@ pyrightもNode.jsのパス解決がサンドボックス内で拒否されたた
 
 実電文のオンライン取得、全順列の網羅、Python 3.11・3.12、リモートCIは今回検証していない。
 git commit・push・公開操作は行っていない。
+
+## 気象警報・注意報の予想時系列（2026-11-12）
+
+`vpwp50-plan.md` に従い、VPWP50 の正規化 API を追加した。
+
+- `WarningTimeSeriesCell`・`WarningTimeSeries`・`warning_timeseries()` を
+  `normalize.timeseries`、`normalize`、パッケージ直下から公開した。
+- TimeSeriesInfo ごとの TimeDefine を refID で参照し、市町村・Local・値の種類・期間ごとに展開する。
+  危険度はコードと名称を保持し、Stage・レベルへの変換は行わない。
+  風雪は STORM のまま condition を残し、高潮の「うちあげ高水位」と「潮位」もそれぞれ保持する。
+- 数値の空要素は `None`、Part 全体の Base/Addition/Note は Local 内のセルにも同じ tuple として保持する。
+  `by_city()` は市町村等コードの完全一致で、親区域への検索は行わない。
+- 未知の Property/Type は UNKNOWN と元の名称を保持して警告し、対応 Part がない場合も警告する。
+  対象外の電文・不正な Body・未定義の refID・Area/Code の欠落は ValueError にする。
+  Control/Status、Kind/Status、Kind/DateTime は判定に使わない。
+- 指定された実電文3通を `tmp/vpwp50/x/` からコピーし、SHA-256 が原本と一致することを確認した。
+  公式サンプル4通と合わせ、ElementTree で値の個数・出現順・TimeDefine の参照先を独立に確認した。
+  Local ごとの風危険度、高潮の2種類の値、欠測値、注記、例外と警告、README の新しい例もテストした。
+- WarningState、既存のテスト、golden、forecast.py、possibility.py に変更はない。
+- 計画の構造説明と異なり、生成型 TypeLocalSignificancy にも addition フィールドがある。
+  今回の notes は公開仕様で指定された Base/Addition/Note を対象とする。
+
+### 完了条件の検証
+
+- `uv run pytest -q`：**1,044件成功（55.62秒）**。追加した22件を含む。skip / xfailなし。
+- `uv run ruff check` / `uv run ruff format --check`：成功（66ファイル）。
+- `uv run pyright`：エラー0件・警告0件。
+- `uv run pyright --verifytypes pyjmaxml --ignoreexternal`：**100%**。
+- `git diff --check` 成功。新規の Python 2ファイルは LF 改行。
+
+`UV_CACHE_DIR` を `tmp/uv-cache`、`PYTEST_DEBUG_TEMPROOT` を `tmp` に設定した。
+pyright はサンドボックス内の Node.js がユーザーディレクトリの参照で EPERM となったため、
+同じコマンドをサンドボックス外で実行した。
+ruff が未追跡の計画書内の Python ブロックにも整形を要求したため、ユーザーの承認を受け、
+`vpwp50-plan.md` と `tracker-plan.md` のコードブロックも整形した。
+
+今回変更・追加したファイル：
+
+- `pyjmaxml/normalize/timeseries.py`（新規）
+- `pyjmaxml/normalize/__init__.py`
+- `pyjmaxml/__init__.py`
+- `tests/test_timeseries.py`（新規）
+- `tests/data/timeseries/`（指定XML 3通とREADME、新規）
+- `README.md`
+- `CHANGELOG.md`
+- `IMPLEMENTATION_STATUS.md`
+- `vpwp50-plan.md`・`tracker-plan.md`（コードブロックの整形のみ）
+
+実電文のオンライン再取得、未同梱の実電文55通での正規化、Python 3.11・3.12、リモートCIは今回検証していない。
+tracker の実装、git commit・push・公開操作は行っていない。
+
+## Tracker（2026-11-12、実装完了・性能条件の例外承認あり）
+
+`tracker-plan.md` の Tracker・AsyncTracker と名前の型を追加した。
+ユーザーから、生成・README 関連の既存テストの更新と、§2.4 の性能停止条件を一時解除して
+原因調査・修正を続ける承認を得た。全体 pyright の時間は依然2倍を超えており、
+この性能条件は承認された例外として残る。型エラーを無視して完了扱いにはしていない。
+
+### 実装と互換性
+
+- 公式の固定コード表から AreaName（1,805区域）と Prefecture（47都道府県）を生成し、
+  codes とパッケージ直下から公開した。分割区域は独立した名前・コードのまま保持する。
+  逆引き・府県別一覧は生成したコード順の辞書から構築し、名前の重複定義を減らした。
+  Archive・Workbook と各 SHA-256 のヘッダーを付け、生成前に名前・件数・府県対応を検証する。
+- 通信しない共通コアと同期・非同期ラッパーを分けた。指定区域・府県の重複を除き、
+  不変な AreaView・PrefectureView を返す。名前は実行時にも確認する。
+- 最初だけ EXTRA・REGULAR の長期フィード、その後に通常の3フィードを読む。
+  （レビュー後の修正）長期フィードの poll が失敗した場合は、成功するまで予定に残し、
+  最小間隔（3600秒）の経過後に読み直す。経過前の TooFrequentError は errors に含めない。
+  修正前は、オフラインで起動すると長期フィードを二度と読まなかった。
+  電文の選択は既存のタイトル対応表を共有し、計画の対象だけを取得する。
+  府県の照合は URL の6桁コードの頭2桁。VPWS50・河川・地震は府県で絞らない。
+- 警報は既存 WarningState に同じ clock の now を渡し、差分は指定区域の city に絞る。
+  正規化結果は種類・URL の6桁コード別、地震は全体で、Control/DateTime の最新を保持する。
+- poll/fetch の FeedError を UpdateResult.errors に返し、他のフィードの処理を続ける。
+  取得失敗は未ack、解析・適用エラーはログとack。その他の例外は呼び出し側に伝える。
+  長期フィードで失敗した取得も次回に再試行し、通常フィードで取得済みなら重複取得しない。
+  長期・通常フィード間で種類別に最大10,000件の処理済みIDを共有する。
+  待機・自動再試行はせず、次の update 呼び出しは利用者が行う。
+- AsyncTracker は単一の既定 HTTP アダプターを所有し、aclose / async with で閉じる。
+  注入されたアダプターは閉じない。同期版と同じ順序で処理する。
+- updated_at は update が正常に戻った時刻（UTC）。FeedError を含むかは errors で確認する。
+- README の最初に Tracker と府県指定の例を置き、従来の本文は低レベル API の下に保持した。
+  `examples/track_areas.py --offline-sample` と CHANGELOG を追加した。
+- FeedClient・WarningState・既存正規化関数のコードと golden は変更していない。
+  kinds.py の既存公開関数は同じ対応表を使い、公開シグネチャ・結果は維持した。
+  既存テストの変更は生成関連2ファイルと README 例の1ファイルで、承認された範囲内。
+
+### オフライン検証
+
+- 録画済みフィードと保存電文16組（REGULAR 7組、EXTRA 9組）のタイトルが一致した。
+  継続検証用には REGULAR 7組と EXTRA 1組をテストし、EXTRA の原電文を改変せず同梱した。
+  コピー元との SHA-256 一致も確認した。オンライン取得は行っていない。
+- 低レベル API と各 View の一致、府県フィルタ、全国集約、対象外のack、長期の初回取得、
+  取得・poll失敗、再取得、古い電文の排除、区域名検証、府県の重複排除、写しの不変性、
+  同期・非同期の結果と通信順序の一致、HTTP 所有権、README・実行例を確認した。
+  forecast / possibility の保存7電文では、区域コードと URL の頭2桁の一致も検証した。
+- `uv run pytest -q`：**1,085件成功（66.33秒）**。skip / xfail なし。
+  既存のネットワーク禁止 fixture を維持し、気象庁へのアクセスは行っていない。
+- `uv run ruff check`：成功。`uv run ruff format --check`：成功（78ファイル）。
+- `uv run pyright`：61ファイル、エラー0件・警告0件。
+- `uv run pyright --verifytypes pyjmaxml --ignoreexternal`：**100%**。
+  公開シンボル532件が既知の型、曖昧・不明な型は0件。
+- `uv run python scripts/codegen.py --offline --codes-only`：成功。
+  生成直後にも ruff の検査・整形チェックが成功することを確認した。
+- `git diff --check`：成功。今回追加した Python 11ファイルはすべて LF。
+
+### pyright の測定と遅延への対応
+
+Python 3.13.7、pyright 1.1.414 の既存環境で測定した。
+Node のサンドボックス内パス検査を避け、pyright は通常環境で実行した。
+以下は uv・プロセス起動を含む実時間。最終値は3対象を順番に実行して取得した。
+
+| 対象 | 変更前 | 最終実装 |
+|---|---|---|
+| `uv run pyright` 全体 | 5.2347338秒、成功 | 14.1343607秒、エラー0件 |
+| 正しい区域名の確認ファイル | 0.867秒、1エラー（Tracker 未実装） | 1.081秒、エラー0件 |
+| 誤った区域名の確認ファイル | 0.849秒、1エラー（Tracker 未実装） | 1.103秒、引数の型エラー1件 |
+
+変更前の未実装エラーはユーザー了承のうえで記録した。
+初期実装の全体解析は90秒を超えて未完了となり、計画どおり一度停止した。
+再開承認後、一時コピーでメソッド群・式を除く比較を行い、Tracker.area の入力検証が
+大きな遅延に関係することを確認した。その検証を、名前の辞書キーによる条件分岐から
+dict.get でコードを取り出す判定へ置き換えた。公開型と実行時の受理条件は維持した。
+型推論で str に広がっていた areas 属性には tuple[AreaName, ...] を明示した。
+全体解析は約18秒で完了するようになり、生成辞書の重複を減らした後は約14秒となった。
+内部の型検査処理をプロファイルしたわけではなく、Literal 一般の性能を保証するものではない。
+
+変更前の2倍は約10.47秒。最終値は約2.70倍で、この基準は満たしていない。
+停止条件の解除はユーザー承認済みだが、性能差は制限として明記する。
+
+（レビュー後の修正）ファイルごとに測ると、`pyjmaxml/tracker/_core.py` だけで約10.5秒かかり、
+そのうち約6秒が `TrackerCore.__init__` の `if name not in AREA_CODE_BY_NAME:` 1行だった
+（AreaName の各リテラルについて `in` による型の絞り込みが行われるため）。
+`AREA_CODE_BY_NAME.get(name) is None` に変えた後の `uv run pyright` 全体は
+3回で 9.19秒・8.79秒・8.41秒（約1.6〜1.8倍）となり、計画 §2.4 の2倍以内に収まった。
+pytest は 1,087件成功（長期フィード再試行のテスト2件を追加）。
+
+確認ソースは `tests/typecheck/tracker_valid.py` と `tracker_invalid.py.txt`。
+`tests/test_tracker_types.py` が一時ファイルと専用設定を作り、CI の既存 pytest から
+両方を pyright にかけ、解析ファイル数・診断数・誤入力の行と診断種類を検査する。
+`# pyright: ignore` は使用していない。測定JSONは `tmp/tracker-typecheck/` の作業データに保存した。
+ファイル数0となった除外設定の試行や、無効な include 設定の試行は測定値から除外した。
+
+全体 pytest の最初の実行では、既存の一時ディレクトリのアクセス拒否で
+1,068件成功・17件 setup エラーとなった。既存領域を削除せず、ワークスペースの tmp 内で
+未作成と確認した固有の --basetemp と cache_dir を指定して再実行し、全件成功した。
+UV_CACHE_DIR は tmp/uv-cache。テストコードの変更でアクセス制約を回避したわけではない。
+
+Python 3.11・3.12、オンライン運用、リモートCIは今回実行していない。
+git commit・push・公開操作は行っていない。

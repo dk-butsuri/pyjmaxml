@@ -10,6 +10,7 @@ from .earthquake import (
 )
 from .forecast import ForecastCell, ForecastElement, WeatherForecast, weather_forecast
 from .possibility import Possibility, PossibilityCell, WarningPossibility, warning_possibility
+from .timeseries import WarningTimeSeries, WarningTimeSeriesCell, warning_timeseries
 from .warning import (
     Element,
     Predicate,
@@ -38,6 +39,8 @@ __all__ = [
     "Stage",
     "WarningKind",
     "WarningPossibility",
+    "WarningTimeSeries",
+    "WarningTimeSeriesCell",
     "WeatherForecast",
     "classify_flood",
     "classify_mete",
@@ -47,5 +50,6 @@ __all__ = [
     "rank",
     "stage_at_least",
     "warning_possibility",
+    "warning_timeseries",
     "weather_forecast",
 ]
