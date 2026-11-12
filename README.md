@@ -3,6 +3,18 @@
 気象庁防災情報XMLの型付きパーサー、PULL型フィードのクライアントと警報の状態管理です。
 Python 3.11以上に対応します。バージョン0.1.0は公開準備中です。
 
+[MIERUNE の jmaxml](https://github.com/MIERUNE/jmaxml) とは別のプロジェクトです。
+
+## ライセンス
+
+コードは [MIT License](LICENSE) です。
+
+ただし、次のものは気象庁のコンテンツで、[公共データ利用規約（第1.0版）](https://www.digital.go.jp/resources/open_data/public_data_license_v1.0)に従います。出典はそれぞれのディレクトリの README に記載しています。
+
+- `tests/data/`、`tests/golden/` の電文・フィードとコード表から作ったデータ
+- `pyjmaxml/_generated/`（気象庁の XML スキーマから自動生成したコード）と `pyjmaxml/codes/`（気象庁のコード表から生成した辞書）
+  - 出典：気象庁「気象庁防災情報XMLフォーマット 技術資料」（https://xml.kishou.go.jp/tec_material.html）の XML スキーマとコード表を、同志社香里 物理部が加工して作成
+
 ## インストール
 
 公開前は、このリポジトリで実行してください。
