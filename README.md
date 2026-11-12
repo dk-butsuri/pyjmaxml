@@ -116,6 +116,29 @@ JSON形式はversion 1です。状態と電文の重複除去記録を保存し�
 分割された市町村等のコードには、氾濫の照会時だけコード表の親市町村との対応を適用します。
 親コードの照会へ子の気象警報を集約しません。
 
+### 警報級の可能性
+
+`warning_possibility(report)` は、VPFD60（明日まで）・VPFD61（早期注意情報、明後日まで）・VPFW60（明後日以降）を、
+一次細分区域・要素・時間帯ごとの `PossibilityCell` に展開します。これらはregularフィードに配信されます。
+
+```python
+from pathlib import Path
+
+from pyjmaxml import Possibility, parse, warning_possibility
+
+report = parse(Path("tests/data/samples/90_01_01_241031_VPFD61.xml"))
+result = warning_possibility(report)
+for cell in result.by_city("3720100"):  # 高松市 → 香川県（370000）
+    if cell.possibility is not None and cell.possibility >= Possibility.MEDIUM:
+        print(cell.element, cell.period_name, cell.raw)
+```
+
+`possibility` は `HIGH`（高）・`MEDIUM`（中）・`NONE`（なし、または `condition="値なし"`）の順に比較できます。
+未知の値は `None`、未知の要素は `Element.UNKNOWN` とし、警告ログを出します。元の文字列は `raw` と `name` に残ります。
+要素は既存の `Element` を使います。「雨」と「大雨」は `HEAVY_RAIN`、「風（風雪）」は `STORM`、「潮位」は `STORM_SURGE` です。
+VPFW60 の時間帯には名前がないため、`period_name` は空文字になります。
+状態管理は行わず、`Control/Status` も確認しません。訓練・試験の電文は呼び出し側で除外してください。
+
 ### パースだけを使う
 
 ```python
@@ -128,8 +151,8 @@ print(report.control.title, report.head.report_date_time)
 ```
 
 `parse()` はXMLのbytes・文字列・Pathを受け取り、gzipも自動展開します。
-既定は `strict=True` です。これは未知の要素等の解析エラーを検出する設定で、XSD検証ではありません。
-未対応のBodyは `UnknownBody` として保持します。
+既定は `strict=False` で、未対応のBodyは `UnknownBody` として保持します。
+`strict=True` は未知の要素・値の変換失敗・未対応のBodyを `ParseError` にします。XSD検証ではありません。
 
 ## 出典表示と利用上の注意
 
