@@ -175,6 +175,45 @@ VPFW50の区域は一次細分区域より粗いことがあります（鹿児�
 VPFW50の「７日間平年値」（降水量の階級閾値）は時系列ではないため展開しません。
 `Control/Status` は確認しません。
 
+### 地震情報
+
+`earthquake_info(report)` は、VXSE51（震度速報）・VXSE52（震源に関する情報）・VXSE53（震源・震度に関する情報、
+遠地地震に関する情報）を、震源・マグニチュードと、都道府県・地域・市町村・観測点ごとの `IntensityCell` に展開します。
+これらはeqvolフィードに配信されます。
+
+```python
+from pathlib import Path
+
+from pyjmaxml import Intensity, earthquake_info, parse
+
+report = parse(Path("tests/data/earthquake/20261107160836_0_VXSE53_010000.xml"))
+info = earthquake_info(report)
+if info.info_type != "取消" and info.hypocenter and info.magnitude:
+    print(info.origin_time, info.hypocenter.name, info.hypocenter.depth_km, "km")
+    print(info.magnitude.description, info.max_intensity, info.forecast_comment)
+for cell in info.by_city("2322400"):  # 知多市
+    print(cell.level, cell.name, cell.intensity)
+for cell in info.intensities:
+    strong = cell.intensity is not None and cell.intensity >= Intensity.FIVE_LOWER
+    if cell.level == "city" and (strong or cell.unreceived):
+        print(cell.name, cell.intensity or cell.raw)
+```
+
+`Intensity` は `FIVE_LOWER < FIVE_UPPER` のように比較できます。値は順位で、震度5強は `6` です。
+`str()` とf文字列は「震度5強」と表示します。`int()` の値を震度として表示しないでください。
+「震度５弱以上未入電」は `unreceived=True` です。観測点では `intensity` が `None`、
+市町村では入電した観測点だけの最大震度か `None` になるため、強い揺れの判定では `unreceived` も確認してください。
+未知の震度は `None` とし、警告ログを出します。元の文字列は `raw` に残ります。
+
+震源の深さは `depth_km` で、「ごく浅い」は `0.0`、「深さ不明」は `None` です。
+マグニチュードが決まらない場合（「Ｍ８を超える巨大地震」など）は `magnitude.value` が `None` で、
+`description` に元の文が残ります。続報で追加・上方修正された値は `revise` に「追加」「上方修正」が入ります。
+
+VXSE51は地域までしか含まないため、`by_city()` は空になります。地域は `by_area()` に地震情報用の細分区域コード
+（愛知県西部は451）を渡してください。取消報（`info_type == "取消"`）は `text` だけを持ちます。
+同じ地震の続報は `event_id` が共通です。状態管理は行わず、`Control/Status` も確認しません。
+緊急地震速報（VXSE43〜45）は対象外です。公開のPULL型フィードにも配信されません。
+
 ### パースだけを使う
 
 ```python

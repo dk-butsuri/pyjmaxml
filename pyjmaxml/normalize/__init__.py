@@ -1,5 +1,13 @@
 """Warning classification and composable predicates."""
 
+from .earthquake import (
+    EarthquakeInfo,
+    Hypocenter,
+    Intensity,
+    IntensityCell,
+    Magnitude,
+    earthquake_info,
+)
 from .forecast import ForecastCell, ForecastElement, WeatherForecast, weather_forecast
 from .possibility import Possibility, PossibilityCell, WarningPossibility, warning_possibility
 from .warning import (
@@ -16,9 +24,14 @@ from .warning import (
 )
 
 __all__ = [
+    "EarthquakeInfo",
     "Element",
     "ForecastCell",
     "ForecastElement",
+    "Hypocenter",
+    "Intensity",
+    "IntensityCell",
+    "Magnitude",
     "Possibility",
     "PossibilityCell",
     "Predicate",
@@ -28,6 +41,7 @@ __all__ = [
     "WeatherForecast",
     "classify_flood",
     "classify_mete",
+    "earthquake_info",
     "element_in",
     "level_at_least",
     "rank",
