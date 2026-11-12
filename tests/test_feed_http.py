@@ -1,5 +1,6 @@
 import sys
 from email.message import Message
+from http.client import IncompleteRead
 from io import BytesIO
 from urllib.error import HTTPError, URLError
 
@@ -7,7 +8,9 @@ import pytest
 
 from pyjmaxml.feed import (
     FeedClient,
+    FeedError,
     FeedKind,
+    FeedTransportError,
     HttpRequest,
     HttpResponse,
     HttpxHttpClient,
@@ -68,16 +71,42 @@ def test_urllib_returns_http_error_responses_for_core_to_interpret(status, monke
     assert body.closed
 
 
-def test_urllib_transport_errors_are_not_hidden(monkeypatch):
-    error = URLError("connection failed")
-
+@pytest.mark.parametrize(
+    "error", [URLError("connection failed"), TimeoutError("timed out"), IncompleteRead(b"par")]
+)
+def test_urllib_transport_errors_become_feed_errors_with_cause(error, monkeypatch):
     def fake_urlopen(request, *, timeout):
         raise error
 
     monkeypatch.setattr("pyjmaxml.feed._http.urlopen", fake_urlopen)
-    with pytest.raises(URLError) as caught:
+    with pytest.raises(FeedTransportError) as caught:
         UrllibHttpClient().send(REQUEST)
-    assert caught.value is error
+    assert isinstance(caught.value, FeedError)
+    assert caught.value.__cause__ is error
+
+
+def test_urllib_truncated_body_becomes_feed_error(monkeypatch):
+    class Response(BytesIO):
+        status = 200
+        headers = Message()
+
+        def read(self, *args):
+            raise IncompleteRead(b"<feed", 100)
+
+    monkeypatch.setattr("pyjmaxml.feed._http.urlopen", lambda request, *, timeout: Response())
+    with pytest.raises(FeedTransportError) as caught:
+        UrllibHttpClient().send(REQUEST)
+    assert isinstance(caught.value.__cause__, IncompleteRead)
+
+
+def test_urllib_other_errors_are_not_converted(monkeypatch):
+    def fake_urlopen(request, *, timeout):
+        raise ValueError("unknown url type")
+
+    monkeypatch.setattr("pyjmaxml.feed._http.urlopen", fake_urlopen)
+    with pytest.raises(ValueError, match="unknown url type") as caught:
+        UrllibHttpClient().send(REQUEST)
+    assert not isinstance(caught.value, FeedError)
 
 
 @pytest.mark.parametrize("status", [200, 304, 500])
@@ -102,6 +131,19 @@ def test_httpx_adapts_status_headers_and_body_without_network(status):
         assert calls[0].headers["If-None-Match"] == REQUEST.headers["If-None-Match"]
         adapter.close()
         assert not client.is_closed
+
+
+def test_httpx_transport_errors_become_feed_errors_with_cause():
+    httpx = pytest.importorskip("httpx")
+    error = httpx.ConnectError("connection refused")
+
+    def handler(request):
+        raise error
+
+    with httpx.Client(transport=httpx.MockTransport(handler), trust_env=False) as client:
+        with pytest.raises(FeedTransportError) as caught:
+            HttpxHttpClient(client).send(REQUEST)
+    assert caught.value.__cause__ is error
 
 
 def test_httpx_owned_client_is_closed():

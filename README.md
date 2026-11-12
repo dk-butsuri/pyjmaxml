@@ -21,7 +21,7 @@ Python 3.11以上に対応します。バージョン0.1.0は公開準備中で�
 
 ```sh
 python -m pip install .
-# httpxの通信アダプターを使う場合
+# httpxの通信アダプターと非同期クライアントを使う場合
 python -m pip install '.[httpx]'
 ```
 
@@ -46,7 +46,7 @@ def update_once(client: FeedClient, state: WarningState) -> None:
     for entry in client.poll():
         try:
             data = client.fetch(entry)
-        except (OSError, FeedError):
+        except FeedError:
             logger.exception("取得失敗（未ack・次回再取得）: %s", entry.id)
             continue
         try:
@@ -75,7 +75,12 @@ print("枚方市", sorted(kind.name for kind in state.by_city("2721000")))
 ackしないと同じ電文が次の `poll()` でも返り続けるためです。
 この例は解析不能な電文もログに残してackします。取得失敗時はackせず、次回に再取得します。
 `apply()` が対象外・訓練・重複・古い電文としてスキップした場合もackします。
-それ以外の例外は呼び出し側に伝わります。実運用ではログの監視と、必要に応じた原文の保存を行ってください。
+同梱の通信アダプター（urllib・httpx）は、接続・タイムアウト・本文の読み込み途中の切断を
+`FeedTransportError`（`FeedError` の一種）に変換し、元の例外を `__cause__` に残します。
+このため `except FeedError` だけで、通信ライブラリによらず取得失敗を扱えます。
+HTTPのエラー状態（404・500など）は `HttpStatusError` です。
+`poll()` の失敗を含め、それ以外の例外は呼び出し側に伝わります。
+実運用ではログの監視と、必要に応じた原文の保存を行ってください。
 
 実行用の同じ処理は [examples/poll_warnings.py](examples/poll_warnings.py) にあります。
 録画済みサンプルを使う次のコマンドはネットワークにアクセスしません。表示は過去のサンプルです。
@@ -115,6 +120,53 @@ assert restored.by_city("2721000") == state.by_city("2721000")
 JSON形式はversion 1です。状態と電文の重複除去記録を保存します。フィードの未処理記録は含みません。
 分割された市町村等のコードには、氾濫の照会時だけコード表の親市町村との対応を適用します。
 親コードの照会へ子の気象警報を集約しません。
+
+### 非同期で取得する
+
+`AsyncFeedClient` は `poll()` と `fetch()` を `await` で呼べるクライアントです。
+既定の通信はhttpxの `AsyncClient` で、`pip install '.[httpx]'` が必要です。
+未処理・ack・最小間隔などの扱いは `FeedClient` と同じです。実行すると気象庁にアクセスします。
+
+```python
+import asyncio
+
+from pyjmaxml import ParseError, WarningState, parse
+from pyjmaxml.feed import AsyncFeedClient, FeedError, FeedKind
+
+
+async def update_once(client: AsyncFeedClient, state: WarningState) -> None:
+    entries = await client.poll()
+    # 取得だけを並行に行い、状態への適用は元の順に1件ずつ行う。
+    results = await asyncio.gather(
+        *(client.fetch(entry) for entry in entries), return_exceptions=True
+    )
+    for entry, data in zip(entries, results, strict=True):
+        if isinstance(data, FeedError):
+            continue  # 取得失敗。ackせず次回に再取得する
+        if isinstance(data, BaseException):
+            raise data
+        try:
+            state.apply(parse(data))
+        except (ParseError, ValueError):
+            pass  # 実運用ではログに残す
+        client.ack(entry)
+
+
+async def main() -> None:
+    state = WarningState()
+    async with AsyncFeedClient(FeedKind.EXTRA, user_agent="my-signage/1.0") as client:
+        while True:
+            await update_once(client, state)
+            await asyncio.sleep(60)
+```
+
+同時に送るリクエストは既定で4件までです（`max_concurrency`）。
+`asyncio.gather` で多数の電文を取得しても、気象庁のサーバーへの同時接続はこの数に抑えられます。
+`WarningState.apply()` は並行に呼ばないでください。
+`http` には `async def send(req)` を持つ任意の通信部品（`AsyncHttpClient`）を渡せます。
+自作する場合は、応答を得られない失敗を `FeedTransportError` にしてください。
+自前のhttpx `AsyncClient` は `HttpxAsyncHttpClient(client)` で渡せ、その場合は呼び出し側が閉じます。
+1つのクライアントは1つのイベントループの中で使ってください。
 
 ### 警報級の可能性
 

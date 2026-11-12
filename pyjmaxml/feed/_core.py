@@ -84,7 +84,7 @@ class _LruSeenStore:
 
 
 class FeedError(ValueError):
-    """An HTTP response cannot be processed as a JMA feed or report."""
+    """A feed or report request failed or its response cannot be processed."""
 
 
 class FeedParseError(FeedError):
@@ -97,6 +97,14 @@ class HttpStatusError(FeedError):
     def __init__(self, status: int) -> None:
         self.status = status
         super().__init__(f"Unexpected HTTP status: {status}")
+
+
+class FeedTransportError(FeedError):
+    """No complete HTTP response arrived; the transport's exception is the cause.
+
+    The bundled adapters raise it for connection, timeout and read failures, so
+    callers need not know the HTTP library. HTTP error statuses are responses.
+    """
 
 
 class TooFrequentError(FeedError):

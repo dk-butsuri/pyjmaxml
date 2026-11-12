@@ -4,6 +4,8 @@
 
 - 気象庁防災情報XMLの型付きパース、gzip入力、未知のBodyの保持。
 - PULL型フィードの条件付きGET、未処理の再返却、明示的なack。
+- `AsyncFeedClient`（非同期クライアント、同時リクエスト数の上限つき）と `HttpxAsyncHttpClient`。
+- 同梱の通信アダプターが、接続・タイムアウト・読み込み途中の切断を `FeedTransportError` に変換する。
 - 配布コード表から生成した市町村等・河川の辞書と警報種別の正規化。
 - VPWW55〜61・VPWS50・VXKO・VXSUの状態管理、差分、JSON version 1での保存・復元。
 - VPFD60・VPFD61・VPFW60（警報級の可能性）を区域・要素・時間帯ごとに展開する `warning_possibility()`。
@@ -16,4 +18,4 @@
   同一環境の7回測定で0.883198秒から0.079703秒に短縮。JSON形式は変更なし。
 - 日本語README、取得・解析・適用・ackの使用例、人間による公開手順。
 
-TestPyPI・PyPIへの公開は未実施です。非同期クライアント（M2b）は含みません。
+TestPyPI・PyPIへの公開は未実施です。

@@ -17,7 +17,7 @@ def update_once(client: FeedClient, state: WarningState) -> None:
     for entry in client.poll():
         try:
             data = client.fetch(entry)
-        except (OSError, FeedError):
+        except FeedError:
             logger.exception("取得失敗（未ack・次回再取得）: %s", entry.id)
             continue
         try:

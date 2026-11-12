@@ -1,4 +1,5 @@
 import ast
+import asyncio
 import importlib.util
 from datetime import UTC, datetime
 from pathlib import Path
@@ -8,7 +9,15 @@ import pytest
 from feed_helpers import feed
 
 from pyjmaxml import WarningState
-from pyjmaxml.feed import FeedClient, FeedKind, HttpRequest, HttpResponse, UrllibHttpClient
+from pyjmaxml.feed import (
+    AsyncFeedClient,
+    FeedClient,
+    FeedKind,
+    FeedTransportError,
+    HttpRequest,
+    HttpResponse,
+    UrllibHttpClient,
+)
 
 ROOT = Path(__file__).parents[1]
 SAMPLE = ROOT / "tests/data/samples/15_16_03_241226_VPWW55.xml"
@@ -64,7 +73,8 @@ def test_readme_ack_and_retry_behavior(failure, caplog):
     body = SAMPLE.read_bytes()
     if failure == "parse":
         body = b"<invalid"
-    response = OSError("test fetch failure") if failure == "fetch" else body
+    # The bundled transports report connection and read failures as FeedTransportError.
+    response = FeedTransportError("test fetch failure") if failure == "fetch" else body
     seen = set()
     client = FeedClient(
         FeedKind.EXTRA,
@@ -106,3 +116,63 @@ def test_offline_script_uses_only_injected_http(monkeypatch, capsys):
     monkeypatch.setattr("sys.argv", ["poll_warnings", "--offline-sample", str(SAMPLE)])
     module.main()
     assert "現在の発表状況ではありません" in capsys.readouterr().out
+
+
+ASYNC_BLOCK = next(
+    block.split("```", 1)[0]
+    for block in README.split("```python\n")[1:]
+    if "AsyncFeedClient" in block.split("```", 1)[0]
+)
+
+
+@pytest.mark.parametrize("failure", [None, "fetch"])
+def test_readme_async_example(failure):
+    # Execute only the imports and update_once, then drive it with an offline transport.
+    tree = ast.parse(ASYNC_BLOCK)
+    names = [node.name for node in tree.body if isinstance(node, ast.AsyncFunctionDef)]
+    assert names == ["update_once", "main"]
+    tree.body = [
+        node
+        for node in tree.body
+        if not (isinstance(node, ast.AsyncFunctionDef) and node.name == "main")
+    ]
+    namespace = {}
+    exec(compile(tree, "README.md", "exec"), namespace)
+
+    class FakeAsyncHttp:
+        def __init__(self) -> None:
+            self.responses = iter(
+                [
+                    HttpResponse(200, {}, feed("sample", "broken")),
+                    HttpResponse(200, {}, SAMPLE.read_bytes()),
+                    FeedTransportError("test fetch failure")
+                    if failure
+                    else HttpResponse(200, {}, b"<invalid"),
+                ]
+            )
+
+        async def send(self, req: HttpRequest) -> HttpResponse:
+            response = next(self.responses, HttpResponse(304, {}, b""))
+            if isinstance(response, Exception):
+                raise response
+            return response
+
+    seen = set()
+    client = AsyncFeedClient(
+        FeedKind.EXTRA,
+        http=FakeAsyncHttp(),
+        seen=seen,
+        clock=lambda: datetime(2026, 11, 12, tzinfo=UTC),
+        min_interval=0,
+        unsafe_min_interval=True,
+        max_concurrency=1,
+    )
+    state = WarningState()
+    asyncio.run(namespace["update_once"](client, state))
+    assert state.by_city("0121400")
+    if failure:
+        assert seen == {"sample"}
+        assert [entry.id for entry in asyncio.run(client.poll())] == ["broken"]
+    else:
+        # Unparsable reports are acknowledged and dropped.
+        assert seen == {"sample", "broken"}
