@@ -8,12 +8,11 @@ from datetime import datetime, timedelta
 from enum import IntEnum
 from typing import Literal, cast
 
-from xsdata.models.datatype import XmlDuration
-
 from .._generated.jmx import TypeTimeSeriesInfo
 from ..codes import AREA_CITY
 from ..kinds import data_type_code
 from ..parse import MeteBody, Report
+from ._time import periods
 from .warning import Element
 
 _LOGGER = logging.getLogger(__name__)
@@ -91,22 +90,8 @@ def _possibility(value: str, condition: str | None) -> Possibility | None:
     return rank
 
 
-def _duration(value: XmlDuration | None) -> timedelta | None:
-    if value is None:
-        return None
-    if value.years or value.months:
-        raise ValueError(f"Warning possibility period has a calendar duration: {value}")
-    result = timedelta(
-        days=value.days or 0,
-        hours=value.hours or 0,
-        minutes=value.minutes or 0,
-        seconds=value.seconds or 0,
-    )
-    return -result if value.negative else result
-
-
 def _series_cells(series: TypeTimeSeriesInfo) -> list[PossibilityCell]:
-    periods = {define.time_id: define for define in series.time_defines.time_define}
+    defines = periods(series)
     cells: list[PossibilityCell] = []
     for item in series.item:
         if item.area is None or item.area.code is None:
@@ -117,12 +102,10 @@ def _series_cells(series: TypeTimeSeriesInfo) -> list[PossibilityCell]:
                 continue
             element = _element(prop.type_value)
             for rank in part.possibility_rank_of_warning:
-                define = periods.get(rank.ref_id) if rank.ref_id is not None else None
-                if define is None:
+                period = defines.get(rank.ref_id) if rank.ref_id is not None else None
+                if period is None:
                     raise ValueError(f"PossibilityRankOfWarning refID {rank.ref_id} is undefined")
-                start = define.date_time.value.to_datetime()
-                if start.utcoffset() is None:
-                    raise ValueError("TimeDefine/DateTime must include a timezone")
+                start, duration, period_name = period
                 cells.append(
                     PossibilityCell(
                         item.area.code,
@@ -130,8 +113,8 @@ def _series_cells(series: TypeTimeSeriesInfo) -> list[PossibilityCell]:
                         element,
                         prop.type_value,
                         start,
-                        _duration(define.duration),
-                        define.name or "",
+                        duration,
+                        period_name,
                         _possibility(rank.value, rank.condition),
                         rank.value or rank.condition or "",
                     )

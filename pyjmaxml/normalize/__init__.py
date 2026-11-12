@@ -1,5 +1,6 @@
 """Warning classification and composable predicates."""
 
+from .forecast import ForecastCell, ForecastElement, WeatherForecast, weather_forecast
 from .possibility import Possibility, PossibilityCell, WarningPossibility, warning_possibility
 from .warning import (
     Element,
@@ -16,12 +17,15 @@ from .warning import (
 
 __all__ = [
     "Element",
+    "ForecastCell",
+    "ForecastElement",
     "Possibility",
     "PossibilityCell",
     "Predicate",
     "Stage",
     "WarningKind",
     "WarningPossibility",
+    "WeatherForecast",
     "classify_flood",
     "classify_mete",
     "element_in",
@@ -29,4 +33,5 @@ __all__ = [
     "rank",
     "stage_at_least",
     "warning_possibility",
+    "weather_forecast",
 ]

@@ -139,6 +139,42 @@ for cell in result.by_city("3720100"):  # 高松市 → 香川県（370000）
 VPFW60 の時間帯には名前がないため、`period_name` は空文字になります。
 状態管理は行わず、`Control/Status` も確認しません。訓練・試験の電文は呼び出し側で除外してください。
 
+### 天気予報
+
+`weather_forecast(report)` は、VPFD51（府県天気予報）・VPFW50（府県週間天気予報）を、
+区域または地点・要素・時間帯ごとの `ForecastCell` に展開します。旧形式のVPFD50にも対応します。
+これらはregularフィードに配信されます。
+
+```python
+from pathlib import Path
+
+from pyjmaxml import ForecastElement, parse, weather_forecast
+
+report = parse(Path("tests/data/forecast/20261111073453_0_VPFD51_130000.xml"))
+result = weather_forecast(report)
+for cell in result.by_city("1310100"):  # 千代田区 → 東京地方（130010）
+    if cell.element is ForecastElement.WEATHER:
+        print(cell.period_name, cell.text)
+    elif cell.element is ForecastElement.PRECIPITATION_PROBABILITY:
+        print(cell.period_name, f"{cell.number:.0f}%")
+for cell in result.by_station("44132"):  # 東京
+    if cell.element is ForecastElement.DAYTIME_MAX_TEMPERATURE:
+        print(cell.period_name, cell.number, "度")
+```
+
+天気・天気予報用テロップ番号・風向・信頼度・風と波の予報文は `text`、
+降水確率・気温・風速階級は `number` に入ります。`condition="値なし"` の値はどちらも `None` です。
+降水確率の `condition` には「雨」「雪か雨」などの降水の種類が入ります。
+元の値の種類（「６時間降水確率」「日降水確率」など）は `label` に残ります。
+未知の要素は `ForecastElement.UNKNOWN` とし、警告ログを出します。
+
+天気・降水確率などは区域、気温は地点（アメダス番号）ごとの予報です。
+電文に区域と地点の対応がないため、`by_city()` は区域だけを返します。気温は `by_station()` で引いてください。
+VPFW50の区域は一次細分区域より粗いことがあります（鹿児島県（奄美地方除く）460100、釧路・根室・十勝地方014000など）。
+`by_city()` は一次細分区域、府県予報区、上位区域（上3桁＋000）の順に探します。
+VPFW50の「７日間平年値」（降水量の階級閾値）は時系列ではないため展開しません。
+`Control/Status` は確認しません。
+
 ### パースだけを使う
 
 ```python

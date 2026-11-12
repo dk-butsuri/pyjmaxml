@@ -1,0 +1,886 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Report xmlns="http://xml.kishou.go.jp/jmaxml1/" xmlns:jmx="http://xml.kishou.go.jp/jmaxml1/" xmlns:jmx_add="http://xml.kishou.go.jp/jmaxml1/addition1/">
+<Control>
+<Title>府県週間天気予報</Title>
+<DateTime>2026-11-11T07:36:05Z</DateTime>
+<Status>通常</Status>
+<EditorialOffice>気象庁本庁</EditorialOffice>
+<PublishingOffice>気象庁</PublishingOffice>
+</Control>
+<Head xmlns="http://xml.kishou.go.jp/jmaxml1/informationBasis1/">
+<Title>東京都府県週間天気予報</Title>
+<ReportDateTime>2026-11-11T17:00:00+09:00</ReportDateTime>
+<TargetDateTime>2026-11-12T00:00:00+09:00</TargetDateTime>
+<TargetDuration>P7D</TargetDuration>
+<EventID/>
+<InfoType>発表</InfoType>
+<Serial/>
+<InfoKind>府県週間天気予報</InfoKind>
+<InfoKindVersion>1.0_0</InfoKindVersion>
+<Headline>
+<Text/>
+</Headline>
+</Head>
+<Body xmlns="http://xml.kishou.go.jp/jmaxml1/body/meteorology1/" xmlns:jmx_eb="http://xml.kishou.go.jp/jmaxml1/elementBasis1/">
+<MeteorologicalInfos type="区域予報">
+<TimeSeriesInfo>
+<TimeDefines>
+<TimeDefine timeId="1">
+<DateTime>2026-11-12T00:00:00+09:00</DateTime>
+<Duration>P1D</Duration>
+</TimeDefine>
+<TimeDefine timeId="2">
+<DateTime>2026-11-13T00:00:00+09:00</DateTime>
+<Duration>P1D</Duration>
+</TimeDefine>
+<TimeDefine timeId="3">
+<DateTime>2026-11-14T00:00:00+09:00</DateTime>
+<Duration>P1D</Duration>
+</TimeDefine>
+<TimeDefine timeId="4">
+<DateTime>2026-11-15T00:00:00+09:00</DateTime>
+<Duration>P1D</Duration>
+</TimeDefine>
+<TimeDefine timeId="5">
+<DateTime>2026-11-16T00:00:00+09:00</DateTime>
+<Duration>P1D</Duration>
+</TimeDefine>
+<TimeDefine timeId="6">
+<DateTime>2026-11-17T00:00:00+09:00</DateTime>
+<Duration>P1D</Duration>
+</TimeDefine>
+<TimeDefine timeId="7">
+<DateTime>2026-11-18T00:00:00+09:00</DateTime>
+<Duration>P1D</Duration>
+</TimeDefine>
+</TimeDefines>
+<Item>
+<Kind>
+<Property>
+<Type>天気</Type>
+<WeatherPart>
+<jmx_eb:Weather type="基本天気" refID="1">晴れ</jmx_eb:Weather>
+<jmx_eb:Weather type="基本天気" refID="2">晴れ時々くもり</jmx_eb:Weather>
+<jmx_eb:Weather type="基本天気" refID="3">晴れ後くもり</jmx_eb:Weather>
+<jmx_eb:Weather type="基本天気" refID="4">くもり一時雨</jmx_eb:Weather>
+<jmx_eb:Weather type="基本天気" refID="5">くもり時々晴れ</jmx_eb:Weather>
+<jmx_eb:Weather type="基本天気" refID="6">くもり一時雨</jmx_eb:Weather>
+<jmx_eb:Weather type="基本天気" refID="7">くもり一時雨</jmx_eb:Weather>
+</WeatherPart>
+<WeatherCodePart>
+<jmx_eb:WeatherCode type="天気予報用テロップ番号" refID="1">100</jmx_eb:WeatherCode>
+<jmx_eb:WeatherCode type="天気予報用テロップ番号" refID="2">101</jmx_eb:WeatherCode>
+<jmx_eb:WeatherCode type="天気予報用テロップ番号" refID="3">111</jmx_eb:WeatherCode>
+<jmx_eb:WeatherCode type="天気予報用テロップ番号" refID="4">202</jmx_eb:WeatherCode>
+<jmx_eb:WeatherCode type="天気予報用テロップ番号" refID="5">201</jmx_eb:WeatherCode>
+<jmx_eb:WeatherCode type="天気予報用テロップ番号" refID="6">202</jmx_eb:WeatherCode>
+<jmx_eb:WeatherCode type="天気予報用テロップ番号" refID="7">202</jmx_eb:WeatherCode>
+</WeatherCodePart>
+</Property>
+</Kind>
+<Kind>
+<Property>
+<Type>降水確率</Type>
+<ProbabilityOfPrecipitationPart>
+<jmx_eb:ProbabilityOfPrecipitation type="日降水確率" unit="%" refID="1" condition="値なし"/>
+<jmx_eb:ProbabilityOfPrecipitation type="日降水確率" unit="%" refID="2" description="１０パーセント">10</jmx_eb:ProbabilityOfPrecipitation>
+<jmx_eb:ProbabilityOfPrecipitation type="日降水確率" unit="%" refID="3" description="２０パーセント">20</jmx_eb:ProbabilityOfPrecipitation>
+<jmx_eb:ProbabilityOfPrecipitation type="日降水確率" unit="%" refID="4" description="５０パーセント">50</jmx_eb:ProbabilityOfPrecipitation>
+<jmx_eb:ProbabilityOfPrecipitation type="日降水確率" unit="%" refID="5" description="３０パーセント">30</jmx_eb:ProbabilityOfPrecipitation>
+<jmx_eb:ProbabilityOfPrecipitation type="日降水確率" unit="%" refID="6" description="５０パーセント">50</jmx_eb:ProbabilityOfPrecipitation>
+<jmx_eb:ProbabilityOfPrecipitation type="日降水確率" unit="%" refID="7" description="５０パーセント">50</jmx_eb:ProbabilityOfPrecipitation>
+</ProbabilityOfPrecipitationPart>
+</Property>
+</Kind>
+<Kind>
+<Property>
+<Type>信頼度</Type>
+<ReliabilityClassPart>
+<jmx_eb:ReliabilityClass type="信頼度階級" refID="1" condition="値なし"/>
+<jmx_eb:ReliabilityClass type="信頼度階級" refID="2" condition="値なし"/>
+<jmx_eb:ReliabilityClass type="信頼度階級" refID="3">A</jmx_eb:ReliabilityClass>
+<jmx_eb:ReliabilityClass type="信頼度階級" refID="4">C</jmx_eb:ReliabilityClass>
+<jmx_eb:ReliabilityClass type="信頼度階級" refID="5">A</jmx_eb:ReliabilityClass>
+<jmx_eb:ReliabilityClass type="信頼度階級" refID="6">C</jmx_eb:ReliabilityClass>
+<jmx_eb:ReliabilityClass type="信頼度階級" refID="7">C</jmx_eb:ReliabilityClass>
+</ReliabilityClassPart>
+</Property>
+</Kind>
+<Area>
+<Name>東京地方</Name>
+<Code>130010</Code>
+</Area>
+</Item>
+<Item>
+<Kind>
+<Property>
+<Type>天気</Type>
+<WeatherPart>
+<jmx_eb:Weather type="基本天気" refID="1">晴れ時々くもり</jmx_eb:Weather>
+<jmx_eb:Weather type="基本天気" refID="2">くもり時々晴れ</jmx_eb:Weather>
+<jmx_eb:Weather type="基本天気" refID="3">くもり時々晴れ</jmx_eb:Weather>
+<jmx_eb:Weather type="基本天気" refID="4">くもり一時雨</jmx_eb:Weather>
+<jmx_eb:Weather type="基本天気" refID="5">くもり</jmx_eb:Weather>
+<jmx_eb:Weather type="基本天気" refID="6">くもり一時雨</jmx_eb:Weather>
+<jmx_eb:Weather type="基本天気" refID="7">くもり一時雨</jmx_eb:Weather>
+</WeatherPart>
+<WeatherCodePart>
+<jmx_eb:WeatherCode type="天気予報用テロップ番号" refID="1">101</jmx_eb:WeatherCode>
+<jmx_eb:WeatherCode type="天気予報用テロップ番号" refID="2">201</jmx_eb:WeatherCode>
+<jmx_eb:WeatherCode type="天気予報用テロップ番号" refID="3">201</jmx_eb:WeatherCode>
+<jmx_eb:WeatherCode type="天気予報用テロップ番号" refID="4">202</jmx_eb:WeatherCode>
+<jmx_eb:WeatherCode type="天気予報用テロップ番号" refID="5">200</jmx_eb:WeatherCode>
+<jmx_eb:WeatherCode type="天気予報用テロップ番号" refID="6">202</jmx_eb:WeatherCode>
+<jmx_eb:WeatherCode type="天気予報用テロップ番号" refID="7">202</jmx_eb:WeatherCode>
+</WeatherCodePart>
+</Property>
+</Kind>
+<Kind>
+<Property>
+<Type>降水確率</Type>
+<ProbabilityOfPrecipitationPart>
+<jmx_eb:ProbabilityOfPrecipitation type="日降水確率" unit="%" refID="1" condition="値なし"/>
+<jmx_eb:ProbabilityOfPrecipitation type="日降水確率" unit="%" refID="2" description="２０パーセント">20</jmx_eb:ProbabilityOfPrecipitation>
+<jmx_eb:ProbabilityOfPrecipitation type="日降水確率" unit="%" refID="3" description="３０パーセント">30</jmx_eb:ProbabilityOfPrecipitation>
+<jmx_eb:ProbabilityOfPrecipitation type="日降水確率" unit="%" refID="4" description="７０パーセント">70</jmx_eb:ProbabilityOfPrecipitation>
+<jmx_eb:ProbabilityOfPrecipitation type="日降水確率" unit="%" refID="5" description="４０パーセント">40</jmx_eb:ProbabilityOfPrecipitation>
+<jmx_eb:ProbabilityOfPrecipitation type="日降水確率" unit="%" refID="6" description="５０パーセント">50</jmx_eb:ProbabilityOfPrecipitation>
+<jmx_eb:ProbabilityOfPrecipitation type="日降水確率" unit="%" refID="7" description="５０パーセント">50</jmx_eb:ProbabilityOfPrecipitation>
+</ProbabilityOfPrecipitationPart>
+</Property>
+</Kind>
+<Kind>
+<Property>
+<Type>信頼度</Type>
+<ReliabilityClassPart>
+<jmx_eb:ReliabilityClass type="信頼度階級" refID="1" condition="値なし"/>
+<jmx_eb:ReliabilityClass type="信頼度階級" refID="2" condition="値なし"/>
+<jmx_eb:ReliabilityClass type="信頼度階級" refID="3">A</jmx_eb:ReliabilityClass>
+<jmx_eb:ReliabilityClass type="信頼度階級" refID="4">A</jmx_eb:ReliabilityClass>
+<jmx_eb:ReliabilityClass type="信頼度階級" refID="5">B</jmx_eb:ReliabilityClass>
+<jmx_eb:ReliabilityClass type="信頼度階級" refID="6">C</jmx_eb:ReliabilityClass>
+<jmx_eb:ReliabilityClass type="信頼度階級" refID="7">C</jmx_eb:ReliabilityClass>
+</ReliabilityClassPart>
+</Property>
+</Kind>
+<Area>
+<Name>伊豆諸島北部</Name>
+<Code>130020</Code>
+</Area>
+</Item>
+<Item>
+<Kind>
+<Property>
+<Type>天気</Type>
+<WeatherPart>
+<jmx_eb:Weather type="基本天気" refID="1">くもり時々晴れ</jmx_eb:Weather>
+<jmx_eb:Weather type="基本天気" refID="2">くもり一時雨</jmx_eb:Weather>
+<jmx_eb:Weather type="基本天気" refID="3">くもり一時雨</jmx_eb:Weather>
+<jmx_eb:Weather type="基本天気" refID="4">くもり一時雨</jmx_eb:Weather>
+<jmx_eb:Weather type="基本天気" refID="5">くもり一時雨</jmx_eb:Weather>
+<jmx_eb:Weather type="基本天気" refID="6">くもり一時雨</jmx_eb:Weather>
+<jmx_eb:Weather type="基本天気" refID="7">くもり一時雨</jmx_eb:Weather>
+</WeatherPart>
+<WeatherCodePart>
+<jmx_eb:WeatherCode type="天気予報用テロップ番号" refID="1">201</jmx_eb:WeatherCode>
+<jmx_eb:WeatherCode type="天気予報用テロップ番号" refID="2">202</jmx_eb:WeatherCode>
+<jmx_eb:WeatherCode type="天気予報用テロップ番号" refID="3">202</jmx_eb:WeatherCode>
+<jmx_eb:WeatherCode type="天気予報用テロップ番号" refID="4">202</jmx_eb:WeatherCode>
+<jmx_eb:WeatherCode type="天気予報用テロップ番号" refID="5">202</jmx_eb:WeatherCode>
+<jmx_eb:WeatherCode type="天気予報用テロップ番号" refID="6">202</jmx_eb:WeatherCode>
+<jmx_eb:WeatherCode type="天気予報用テロップ番号" refID="7">202</jmx_eb:WeatherCode>
+</WeatherCodePart>
+</Property>
+</Kind>
+<Kind>
+<Property>
+<Type>降水確率</Type>
+<ProbabilityOfPrecipitationPart>
+<jmx_eb:ProbabilityOfPrecipitation type="日降水確率" unit="%" refID="1" condition="値なし"/>
+<jmx_eb:ProbabilityOfPrecipitation type="日降水確率" unit="%" refID="2" description="５０パーセント">50</jmx_eb:ProbabilityOfPrecipitation>
+<jmx_eb:ProbabilityOfPrecipitation type="日降水確率" unit="%" refID="3" description="５０パーセント">50</jmx_eb:ProbabilityOfPrecipitation>
+<jmx_eb:ProbabilityOfPrecipitation type="日降水確率" unit="%" refID="4" description="８０パーセント">80</jmx_eb:ProbabilityOfPrecipitation>
+<jmx_eb:ProbabilityOfPrecipitation type="日降水確率" unit="%" refID="5" description="５０パーセント">50</jmx_eb:ProbabilityOfPrecipitation>
+<jmx_eb:ProbabilityOfPrecipitation type="日降水確率" unit="%" refID="6" description="５０パーセント">50</jmx_eb:ProbabilityOfPrecipitation>
+<jmx_eb:ProbabilityOfPrecipitation type="日降水確率" unit="%" refID="7" description="６０パーセント">60</jmx_eb:ProbabilityOfPrecipitation>
+</ProbabilityOfPrecipitationPart>
+</Property>
+</Kind>
+<Kind>
+<Property>
+<Type>信頼度</Type>
+<ReliabilityClassPart>
+<jmx_eb:ReliabilityClass type="信頼度階級" refID="1" condition="値なし"/>
+<jmx_eb:ReliabilityClass type="信頼度階級" refID="2" condition="値なし"/>
+<jmx_eb:ReliabilityClass type="信頼度階級" refID="3">C</jmx_eb:ReliabilityClass>
+<jmx_eb:ReliabilityClass type="信頼度階級" refID="4">A</jmx_eb:ReliabilityClass>
+<jmx_eb:ReliabilityClass type="信頼度階級" refID="5">C</jmx_eb:ReliabilityClass>
+<jmx_eb:ReliabilityClass type="信頼度階級" refID="6">C</jmx_eb:ReliabilityClass>
+<jmx_eb:ReliabilityClass type="信頼度階級" refID="7">B</jmx_eb:ReliabilityClass>
+</ReliabilityClassPart>
+</Property>
+</Kind>
+<Area>
+<Name>伊豆諸島南部</Name>
+<Code>130030</Code>
+</Area>
+</Item>
+<Item>
+<Kind>
+<Property>
+<Type>天気</Type>
+<WeatherPart>
+<jmx_eb:Weather type="基本天気" refID="1">くもり時々晴れ</jmx_eb:Weather>
+<jmx_eb:Weather type="基本天気" refID="2">晴れ時々くもり</jmx_eb:Weather>
+<jmx_eb:Weather type="基本天気" refID="3">くもり時々晴れ</jmx_eb:Weather>
+<jmx_eb:Weather type="基本天気" refID="4">くもり時々晴れ</jmx_eb:Weather>
+<jmx_eb:Weather type="基本天気" refID="5">くもり時々晴れ</jmx_eb:Weather>
+<jmx_eb:Weather type="基本天気" refID="6">くもり時々晴れ</jmx_eb:Weather>
+<jmx_eb:Weather type="基本天気" refID="7">くもり一時雨</jmx_eb:Weather>
+</WeatherPart>
+<WeatherCodePart>
+<jmx_eb:WeatherCode type="天気予報用テロップ番号" refID="1">201</jmx_eb:WeatherCode>
+<jmx_eb:WeatherCode type="天気予報用テロップ番号" refID="2">101</jmx_eb:WeatherCode>
+<jmx_eb:WeatherCode type="天気予報用テロップ番号" refID="3">201</jmx_eb:WeatherCode>
+<jmx_eb:WeatherCode type="天気予報用テロップ番号" refID="4">201</jmx_eb:WeatherCode>
+<jmx_eb:WeatherCode type="天気予報用テロップ番号" refID="5">201</jmx_eb:WeatherCode>
+<jmx_eb:WeatherCode type="天気予報用テロップ番号" refID="6">201</jmx_eb:WeatherCode>
+<jmx_eb:WeatherCode type="天気予報用テロップ番号" refID="7">202</jmx_eb:WeatherCode>
+</WeatherCodePart>
+</Property>
+</Kind>
+<Kind>
+<Property>
+<Type>降水確率</Type>
+<ProbabilityOfPrecipitationPart>
+<jmx_eb:ProbabilityOfPrecipitation type="日降水確率" unit="%" refID="1" condition="値なし"/>
+<jmx_eb:ProbabilityOfPrecipitation type="日降水確率" unit="%" refID="2" description="２０パーセント">20</jmx_eb:ProbabilityOfPrecipitation>
+<jmx_eb:ProbabilityOfPrecipitation type="日降水確率" unit="%" refID="3" description="１０パーセント">10</jmx_eb:ProbabilityOfPrecipitation>
+<jmx_eb:ProbabilityOfPrecipitation type="日降水確率" unit="%" refID="4" description="１０パーセント">10</jmx_eb:ProbabilityOfPrecipitation>
+<jmx_eb:ProbabilityOfPrecipitation type="日降水確率" unit="%" refID="5" description="３０パーセント">30</jmx_eb:ProbabilityOfPrecipitation>
+<jmx_eb:ProbabilityOfPrecipitation type="日降水確率" unit="%" refID="6" description="３０パーセント">30</jmx_eb:ProbabilityOfPrecipitation>
+<jmx_eb:ProbabilityOfPrecipitation type="日降水確率" unit="%" refID="7" description="５０パーセント">50</jmx_eb:ProbabilityOfPrecipitation>
+</ProbabilityOfPrecipitationPart>
+</Property>
+</Kind>
+<Kind>
+<Property>
+<Type>信頼度</Type>
+<ReliabilityClassPart>
+<jmx_eb:ReliabilityClass type="信頼度階級" refID="1" condition="値なし"/>
+<jmx_eb:ReliabilityClass type="信頼度階級" refID="2" condition="値なし"/>
+<jmx_eb:ReliabilityClass type="信頼度階級" refID="3">A</jmx_eb:ReliabilityClass>
+<jmx_eb:ReliabilityClass type="信頼度階級" refID="4">A</jmx_eb:ReliabilityClass>
+<jmx_eb:ReliabilityClass type="信頼度階級" refID="5">B</jmx_eb:ReliabilityClass>
+<jmx_eb:ReliabilityClass type="信頼度階級" refID="6">B</jmx_eb:ReliabilityClass>
+<jmx_eb:ReliabilityClass type="信頼度階級" refID="7">C</jmx_eb:ReliabilityClass>
+</ReliabilityClassPart>
+</Property>
+</Kind>
+<Area>
+<Name>小笠原諸島</Name>
+<Code>130040</Code>
+</Area>
+</Item>
+</TimeSeriesInfo>
+</MeteorologicalInfos>
+<MeteorologicalInfos type="地点予報">
+<TimeSeriesInfo>
+<TimeDefines>
+<TimeDefine timeId="1">
+<DateTime>2026-11-12T00:00:00+09:00</DateTime>
+<Duration>P1D</Duration>
+</TimeDefine>
+<TimeDefine timeId="2">
+<DateTime>2026-11-13T00:00:00+09:00</DateTime>
+<Duration>P1D</Duration>
+</TimeDefine>
+<TimeDefine timeId="3">
+<DateTime>2026-11-14T00:00:00+09:00</DateTime>
+<Duration>P1D</Duration>
+</TimeDefine>
+<TimeDefine timeId="4">
+<DateTime>2026-11-15T00:00:00+09:00</DateTime>
+<Duration>P1D</Duration>
+</TimeDefine>
+<TimeDefine timeId="5">
+<DateTime>2026-11-16T00:00:00+09:00</DateTime>
+<Duration>P1D</Duration>
+</TimeDefine>
+<TimeDefine timeId="6">
+<DateTime>2026-11-17T00:00:00+09:00</DateTime>
+<Duration>P1D</Duration>
+</TimeDefine>
+<TimeDefine timeId="7">
+<DateTime>2026-11-18T00:00:00+09:00</DateTime>
+<Duration>P1D</Duration>
+</TimeDefine>
+</TimeDefines>
+<Item>
+<Kind>
+<Property>
+<Type>最低気温</Type>
+<TemperaturePart>
+<jmx_eb:Temperature type="最低気温" unit="度" refID="1" condition="値なし"/>
+<jmx_eb:Temperature type="最低気温" unit="度" refID="2" description="９度">9</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温" unit="度" refID="3" description="９度">9</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温" unit="度" refID="4" description="１２度">12</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温" unit="度" refID="5" description="１２度">12</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温" unit="度" refID="6" description="１１度">11</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温" unit="度" refID="7" description="１１度">11</jmx_eb:Temperature>
+</TemperaturePart>
+</Property>
+<Property>
+<Type>最低気温予測範囲</Type>
+<TemperaturePart>
+<jmx_eb:Temperature type="最低気温予測範囲（上端）" unit="度" refID="1" condition="値なし"/>
+<jmx_eb:Temperature type="最低気温予測範囲（上端）" unit="度" refID="2" description="１１度">11</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温予測範囲（上端）" unit="度" refID="3" description="１１度">11</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温予測範囲（上端）" unit="度" refID="4" description="１４度">14</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温予測範囲（上端）" unit="度" refID="5" description="１４度">14</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温予測範囲（上端）" unit="度" refID="6" description="１２度">12</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温予測範囲（上端）" unit="度" refID="7" description="１２度">12</jmx_eb:Temperature>
+</TemperaturePart>
+</Property>
+<Property>
+<Type>最低気温予測範囲</Type>
+<TemperaturePart>
+<jmx_eb:Temperature type="最低気温予測範囲（下端）" unit="度" refID="1" condition="値なし"/>
+<jmx_eb:Temperature type="最低気温予測範囲（下端）" unit="度" refID="2" description="８度">8</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温予測範囲（下端）" unit="度" refID="3" description="８度">8</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温予測範囲（下端）" unit="度" refID="4" description="１１度">11</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温予測範囲（下端）" unit="度" refID="5" description="１１度">11</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温予測範囲（下端）" unit="度" refID="6" description="８度">8</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温予測範囲（下端）" unit="度" refID="7" description="７度">7</jmx_eb:Temperature>
+</TemperaturePart>
+</Property>
+<Property>
+<Type>最高気温</Type>
+<TemperaturePart>
+<jmx_eb:Temperature type="最高気温" unit="度" refID="1" condition="値なし"/>
+<jmx_eb:Temperature type="最高気温" unit="度" refID="2" description="２１度">21</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温" unit="度" refID="3" description="２１度">21</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温" unit="度" refID="4" description="１８度">18</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温" unit="度" refID="5" description="１９度">19</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温" unit="度" refID="6" description="１４度">14</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温" unit="度" refID="7" description="１８度">18</jmx_eb:Temperature>
+</TemperaturePart>
+</Property>
+<Property>
+<Type>最高気温予測範囲</Type>
+<TemperaturePart>
+<jmx_eb:Temperature type="最高気温予測範囲（上端）" unit="度" refID="1" condition="値なし"/>
+<jmx_eb:Temperature type="最高気温予測範囲（上端）" unit="度" refID="2" description="２３度">23</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温予測範囲（上端）" unit="度" refID="3" description="２２度">22</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温予測範囲（上端）" unit="度" refID="4" description="２２度">22</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温予測範囲（上端）" unit="度" refID="5" description="２１度">21</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温予測範囲（上端）" unit="度" refID="6" description="１７度">17</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温予測範囲（上端）" unit="度" refID="7" description="２３度">23</jmx_eb:Temperature>
+</TemperaturePart>
+</Property>
+<Property>
+<Type>最高気温予測範囲</Type>
+<TemperaturePart>
+<jmx_eb:Temperature type="最高気温予測範囲（下端）" unit="度" refID="1" condition="値なし"/>
+<jmx_eb:Temperature type="最高気温予測範囲（下端）" unit="度" refID="2" description="１９度">19</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温予測範囲（下端）" unit="度" refID="3" description="１９度">19</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温予測範囲（下端）" unit="度" refID="4" description="１６度">16</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温予測範囲（下端）" unit="度" refID="5" description="１７度">17</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温予測範囲（下端）" unit="度" refID="6" description="１２度">12</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温予測範囲（下端）" unit="度" refID="7" description="１５度">15</jmx_eb:Temperature>
+</TemperaturePart>
+</Property>
+</Kind>
+<Station>
+<Name>東京</Name>
+<Code>44132</Code>
+</Station>
+</Item>
+<Item>
+<Kind>
+<Property>
+<Type>最低気温</Type>
+<TemperaturePart>
+<jmx_eb:Temperature type="最低気温" unit="度" refID="1" condition="値なし"/>
+<jmx_eb:Temperature type="最低気温" unit="度" refID="2" description="１５度">15</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温" unit="度" refID="3" description="１４度">14</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温" unit="度" refID="4" description="１６度">16</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温" unit="度" refID="5" description="１４度">14</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温" unit="度" refID="6" description="１２度">12</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温" unit="度" refID="7" description="１２度">12</jmx_eb:Temperature>
+</TemperaturePart>
+</Property>
+<Property>
+<Type>最低気温予測範囲</Type>
+<TemperaturePart>
+<jmx_eb:Temperature type="最低気温予測範囲（上端）" unit="度" refID="1" condition="値なし"/>
+<jmx_eb:Temperature type="最低気温予測範囲（上端）" unit="度" refID="2" description="１６度">16</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温予測範囲（上端）" unit="度" refID="3" description="１５度">15</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温予測範囲（上端）" unit="度" refID="4" description="１７度">17</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温予測範囲（上端）" unit="度" refID="5" description="１５度">15</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温予測範囲（上端）" unit="度" refID="6" description="１４度">14</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温予測範囲（上端）" unit="度" refID="7" description="１４度">14</jmx_eb:Temperature>
+</TemperaturePart>
+</Property>
+<Property>
+<Type>最低気温予測範囲</Type>
+<TemperaturePart>
+<jmx_eb:Temperature type="最低気温予測範囲（下端）" unit="度" refID="1" condition="値なし"/>
+<jmx_eb:Temperature type="最低気温予測範囲（下端）" unit="度" refID="2" description="１３度">13</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温予測範囲（下端）" unit="度" refID="3" description="１２度">12</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温予測範囲（下端）" unit="度" refID="4" description="１３度">13</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温予測範囲（下端）" unit="度" refID="5" description="１２度">12</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温予測範囲（下端）" unit="度" refID="6" description="９度">9</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温予測範囲（下端）" unit="度" refID="7" description="９度">9</jmx_eb:Temperature>
+</TemperaturePart>
+</Property>
+<Property>
+<Type>最高気温</Type>
+<TemperaturePart>
+<jmx_eb:Temperature type="最高気温" unit="度" refID="1" condition="値なし"/>
+<jmx_eb:Temperature type="最高気温" unit="度" refID="2" description="２１度">21</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温" unit="度" refID="3" description="２１度">21</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温" unit="度" refID="4" description="１９度">19</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温" unit="度" refID="5" description="１９度">19</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温" unit="度" refID="6" description="１６度">16</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温" unit="度" refID="7" description="１９度">19</jmx_eb:Temperature>
+</TemperaturePart>
+</Property>
+<Property>
+<Type>最高気温予測範囲</Type>
+<TemperaturePart>
+<jmx_eb:Temperature type="最高気温予測範囲（上端）" unit="度" refID="1" condition="値なし"/>
+<jmx_eb:Temperature type="最高気温予測範囲（上端）" unit="度" refID="2" description="２３度">23</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温予測範囲（上端）" unit="度" refID="3" description="２２度">22</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温予測範囲（上端）" unit="度" refID="4" description="２１度">21</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温予測範囲（上端）" unit="度" refID="5" description="２１度">21</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温予測範囲（上端）" unit="度" refID="6" description="２０度">20</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温予測範囲（上端）" unit="度" refID="7" description="２２度">22</jmx_eb:Temperature>
+</TemperaturePart>
+</Property>
+<Property>
+<Type>最高気温予測範囲</Type>
+<TemperaturePart>
+<jmx_eb:Temperature type="最高気温予測範囲（下端）" unit="度" refID="1" condition="値なし"/>
+<jmx_eb:Temperature type="最高気温予測範囲（下端）" unit="度" refID="2" description="１９度">19</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温予測範囲（下端）" unit="度" refID="3" description="１９度">19</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温予測範囲（下端）" unit="度" refID="4" description="１８度">18</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温予測範囲（下端）" unit="度" refID="5" description="１６度">16</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温予測範囲（下端）" unit="度" refID="6" description="１５度">15</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温予測範囲（下端）" unit="度" refID="7" description="１７度">17</jmx_eb:Temperature>
+</TemperaturePart>
+</Property>
+</Kind>
+<Station>
+<Name>大島</Name>
+<Code>44172</Code>
+</Station>
+</Item>
+<Item>
+<Kind>
+<Property>
+<Type>最低気温</Type>
+<TemperaturePart>
+<jmx_eb:Temperature type="最低気温" unit="度" refID="1" condition="値なし"/>
+<jmx_eb:Temperature type="最低気温" unit="度" refID="2" description="１６度">16</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温" unit="度" refID="3" description="１７度">17</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温" unit="度" refID="4" description="１８度">18</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温" unit="度" refID="5" description="１６度">16</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温" unit="度" refID="6" description="１６度">16</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温" unit="度" refID="7" description="１５度">15</jmx_eb:Temperature>
+</TemperaturePart>
+</Property>
+<Property>
+<Type>最低気温予測範囲</Type>
+<TemperaturePart>
+<jmx_eb:Temperature type="最低気温予測範囲（上端）" unit="度" refID="1" condition="値なし"/>
+<jmx_eb:Temperature type="最低気温予測範囲（上端）" unit="度" refID="2" description="１８度">18</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温予測範囲（上端）" unit="度" refID="3" description="１８度">18</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温予測範囲（上端）" unit="度" refID="4" description="２０度">20</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温予測範囲（上端）" unit="度" refID="5" description="１８度">18</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温予測範囲（上端）" unit="度" refID="6" description="１８度">18</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温予測範囲（上端）" unit="度" refID="7" description="１８度">18</jmx_eb:Temperature>
+</TemperaturePart>
+</Property>
+<Property>
+<Type>最低気温予測範囲</Type>
+<TemperaturePart>
+<jmx_eb:Temperature type="最低気温予測範囲（下端）" unit="度" refID="1" condition="値なし"/>
+<jmx_eb:Temperature type="最低気温予測範囲（下端）" unit="度" refID="2" description="１５度">15</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温予測範囲（下端）" unit="度" refID="3" description="１６度">16</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温予測範囲（下端）" unit="度" refID="4" description="１７度">17</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温予測範囲（下端）" unit="度" refID="5" description="１５度">15</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温予測範囲（下端）" unit="度" refID="6" description="１４度">14</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温予測範囲（下端）" unit="度" refID="7" description="１２度">12</jmx_eb:Temperature>
+</TemperaturePart>
+</Property>
+<Property>
+<Type>最高気温</Type>
+<TemperaturePart>
+<jmx_eb:Temperature type="最高気温" unit="度" refID="1" condition="値なし"/>
+<jmx_eb:Temperature type="最高気温" unit="度" refID="2" description="２１度">21</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温" unit="度" refID="3" description="２２度">22</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温" unit="度" refID="4" description="２２度">22</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温" unit="度" refID="5" description="２１度">21</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温" unit="度" refID="6" description="２２度">22</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温" unit="度" refID="7" description="２１度">21</jmx_eb:Temperature>
+</TemperaturePart>
+</Property>
+<Property>
+<Type>最高気温予測範囲</Type>
+<TemperaturePart>
+<jmx_eb:Temperature type="最高気温予測範囲（上端）" unit="度" refID="1" condition="値なし"/>
+<jmx_eb:Temperature type="最高気温予測範囲（上端）" unit="度" refID="2" description="２３度">23</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温予測範囲（上端）" unit="度" refID="3" description="２３度">23</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温予測範囲（上端）" unit="度" refID="4" description="２３度">23</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温予測範囲（上端）" unit="度" refID="5" description="２３度">23</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温予測範囲（上端）" unit="度" refID="6" description="２３度">23</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温予測範囲（上端）" unit="度" refID="7" description="２４度">24</jmx_eb:Temperature>
+</TemperaturePart>
+</Property>
+<Property>
+<Type>最高気温予測範囲</Type>
+<TemperaturePart>
+<jmx_eb:Temperature type="最高気温予測範囲（下端）" unit="度" refID="1" condition="値なし"/>
+<jmx_eb:Temperature type="最高気温予測範囲（下端）" unit="度" refID="2" description="２０度">20</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温予測範囲（下端）" unit="度" refID="3" description="２０度">20</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温予測範囲（下端）" unit="度" refID="4" description="２０度">20</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温予測範囲（下端）" unit="度" refID="5" description="２０度">20</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温予測範囲（下端）" unit="度" refID="6" description="２０度">20</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温予測範囲（下端）" unit="度" refID="7" description="２０度">20</jmx_eb:Temperature>
+</TemperaturePart>
+</Property>
+</Kind>
+<Station>
+<Name>八丈島</Name>
+<Code>44263</Code>
+</Station>
+</Item>
+<Item>
+<Kind>
+<Property>
+<Type>最低気温</Type>
+<TemperaturePart>
+<jmx_eb:Temperature type="最低気温" unit="度" refID="1" condition="値なし"/>
+<jmx_eb:Temperature type="最低気温" unit="度" refID="2" description="２１度">21</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温" unit="度" refID="3" description="２２度">22</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温" unit="度" refID="4" description="２３度">23</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温" unit="度" refID="5" description="２２度">22</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温" unit="度" refID="6" description="２２度">22</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温" unit="度" refID="7" description="２４度">24</jmx_eb:Temperature>
+</TemperaturePart>
+</Property>
+<Property>
+<Type>最低気温予測範囲</Type>
+<TemperaturePart>
+<jmx_eb:Temperature type="最低気温予測範囲（上端）" unit="度" refID="1" condition="値なし"/>
+<jmx_eb:Temperature type="最低気温予測範囲（上端）" unit="度" refID="2" description="２３度">23</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温予測範囲（上端）" unit="度" refID="3" description="２３度">23</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温予測範囲（上端）" unit="度" refID="4" description="２４度">24</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温予測範囲（上端）" unit="度" refID="5" description="２３度">23</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温予測範囲（上端）" unit="度" refID="6" description="２４度">24</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温予測範囲（上端）" unit="度" refID="7" description="２５度">25</jmx_eb:Temperature>
+</TemperaturePart>
+</Property>
+<Property>
+<Type>最低気温予測範囲</Type>
+<TemperaturePart>
+<jmx_eb:Temperature type="最低気温予測範囲（下端）" unit="度" refID="1" condition="値なし"/>
+<jmx_eb:Temperature type="最低気温予測範囲（下端）" unit="度" refID="2" description="２０度">20</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温予測範囲（下端）" unit="度" refID="3" description="２０度">20</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温予測範囲（下端）" unit="度" refID="4" description="２１度">21</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温予測範囲（下端）" unit="度" refID="5" description="２１度">21</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温予測範囲（下端）" unit="度" refID="6" description="２１度">21</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温予測範囲（下端）" unit="度" refID="7" description="２２度">22</jmx_eb:Temperature>
+</TemperaturePart>
+</Property>
+<Property>
+<Type>最高気温</Type>
+<TemperaturePart>
+<jmx_eb:Temperature type="最高気温" unit="度" refID="1" condition="値なし"/>
+<jmx_eb:Temperature type="最高気温" unit="度" refID="2" description="２５度">25</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温" unit="度" refID="3" description="２６度">26</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温" unit="度" refID="4" description="２７度">27</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温" unit="度" refID="5" description="２７度">27</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温" unit="度" refID="6" description="２７度">27</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温" unit="度" refID="7" description="２６度">26</jmx_eb:Temperature>
+</TemperaturePart>
+</Property>
+<Property>
+<Type>最高気温予測範囲</Type>
+<TemperaturePart>
+<jmx_eb:Temperature type="最高気温予測範囲（上端）" unit="度" refID="1" condition="値なし"/>
+<jmx_eb:Temperature type="最高気温予測範囲（上端）" unit="度" refID="2" description="２６度">26</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温予測範囲（上端）" unit="度" refID="3" description="２７度">27</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温予測範囲（上端）" unit="度" refID="4" description="２８度">28</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温予測範囲（上端）" unit="度" refID="5" description="２８度">28</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温予測範囲（上端）" unit="度" refID="6" description="２８度">28</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温予測範囲（上端）" unit="度" refID="7" description="２８度">28</jmx_eb:Temperature>
+</TemperaturePart>
+</Property>
+<Property>
+<Type>最高気温予測範囲</Type>
+<TemperaturePart>
+<jmx_eb:Temperature type="最高気温予測範囲（下端）" unit="度" refID="1" condition="値なし"/>
+<jmx_eb:Temperature type="最高気温予測範囲（下端）" unit="度" refID="2" description="２４度">24</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温予測範囲（下端）" unit="度" refID="3" description="２５度">25</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温予測範囲（下端）" unit="度" refID="4" description="２６度">26</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温予測範囲（下端）" unit="度" refID="5" description="２６度">26</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温予測範囲（下端）" unit="度" refID="6" description="２６度">26</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温予測範囲（下端）" unit="度" refID="7" description="２５度">25</jmx_eb:Temperature>
+</TemperaturePart>
+</Property>
+</Kind>
+<Station>
+<Name>父島</Name>
+<Code>44301</Code>
+</Station>
+</Item>
+</TimeSeriesInfo>
+</MeteorologicalInfos>
+<MeteorologicalInfos type="日別平年値">
+<TimeSeriesInfo>
+<TimeDefines>
+<TimeDefine timeId="1">
+<DateTime>2026-11-12T00:00:00+09:00</DateTime>
+<Duration>P1D</Duration>
+</TimeDefine>
+<TimeDefine timeId="2">
+<DateTime>2026-11-13T00:00:00+09:00</DateTime>
+<Duration>P1D</Duration>
+</TimeDefine>
+<TimeDefine timeId="3">
+<DateTime>2026-11-14T00:00:00+09:00</DateTime>
+<Duration>P1D</Duration>
+</TimeDefine>
+<TimeDefine timeId="4">
+<DateTime>2026-11-15T00:00:00+09:00</DateTime>
+<Duration>P1D</Duration>
+</TimeDefine>
+<TimeDefine timeId="5">
+<DateTime>2026-11-16T00:00:00+09:00</DateTime>
+<Duration>P1D</Duration>
+</TimeDefine>
+<TimeDefine timeId="6">
+<DateTime>2026-11-17T00:00:00+09:00</DateTime>
+<Duration>P1D</Duration>
+</TimeDefine>
+<TimeDefine timeId="7">
+<DateTime>2026-11-18T00:00:00+09:00</DateTime>
+<Duration>P1D</Duration>
+</TimeDefine>
+</TimeDefines>
+<Item>
+<Kind>
+<Property>
+<Type>最低気温平年値</Type>
+<TemperaturePart>
+<jmx_eb:Temperature type="最低気温平年値" unit="度" refID="1" description="９．５度">9.5</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温平年値" unit="度" refID="2" description="９．３度">9.3</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温平年値" unit="度" refID="3" description="９．１度">9.1</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温平年値" unit="度" refID="4" description="８．９度">8.9</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温平年値" unit="度" refID="5" description="８．７度">8.7</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温平年値" unit="度" refID="6" description="８．５度">8.5</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温平年値" unit="度" refID="7" description="８．３度">8.3</jmx_eb:Temperature>
+</TemperaturePart>
+</Property>
+<Property>
+<Type>最高気温平年値</Type>
+<TemperaturePart>
+<jmx_eb:Temperature type="最高気温平年値" unit="度" refID="1" description="１７．３度">17.3</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温平年値" unit="度" refID="2" description="１７．１度">17.1</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温平年値" unit="度" refID="3" description="１７．０度">17.0</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温平年値" unit="度" refID="4" description="１６．８度">16.8</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温平年値" unit="度" refID="5" description="１６．６度">16.6</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温平年値" unit="度" refID="6" description="１６．４度">16.4</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温平年値" unit="度" refID="7" description="１６．２度">16.2</jmx_eb:Temperature>
+</TemperaturePart>
+</Property>
+</Kind>
+<Station>
+<Name>東京</Name>
+<Code>44132</Code>
+</Station>
+</Item>
+<Item>
+<Kind>
+<Property>
+<Type>最低気温平年値</Type>
+<TemperaturePart>
+<jmx_eb:Temperature type="最低気温平年値" unit="度" refID="1" description="１２．０度">12.0</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温平年値" unit="度" refID="2" description="１１．８度">11.8</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温平年値" unit="度" refID="3" description="１１．６度">11.6</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温平年値" unit="度" refID="4" description="１１．４度">11.4</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温平年値" unit="度" refID="5" description="１１．３度">11.3</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温平年値" unit="度" refID="6" description="１１．１度">11.1</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温平年値" unit="度" refID="7" description="１０．９度">10.9</jmx_eb:Temperature>
+</TemperaturePart>
+</Property>
+<Property>
+<Type>最高気温平年値</Type>
+<TemperaturePart>
+<jmx_eb:Temperature type="最高気温平年値" unit="度" refID="1" description="１８．３度">18.3</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温平年値" unit="度" refID="2" description="１８．２度">18.2</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温平年値" unit="度" refID="3" description="１８．０度">18.0</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温平年値" unit="度" refID="4" description="１７．８度">17.8</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温平年値" unit="度" refID="5" description="１７．６度">17.6</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温平年値" unit="度" refID="6" description="１７．５度">17.5</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温平年値" unit="度" refID="7" description="１７．３度">17.3</jmx_eb:Temperature>
+</TemperaturePart>
+</Property>
+</Kind>
+<Station>
+<Name>大島</Name>
+<Code>44172</Code>
+</Station>
+</Item>
+<Item>
+<Kind>
+<Property>
+<Type>最低気温平年値</Type>
+<TemperaturePart>
+<jmx_eb:Temperature type="最低気温平年値" unit="度" refID="1" description="１４．７度">14.7</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温平年値" unit="度" refID="2" description="１４．６度">14.6</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温平年値" unit="度" refID="3" description="１４．４度">14.4</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温平年値" unit="度" refID="4" description="１４．３度">14.3</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温平年値" unit="度" refID="5" description="１４．１度">14.1</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温平年値" unit="度" refID="6" description="１４．０度">14.0</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温平年値" unit="度" refID="7" description="１３．８度">13.8</jmx_eb:Temperature>
+</TemperaturePart>
+</Property>
+<Property>
+<Type>最高気温平年値</Type>
+<TemperaturePart>
+<jmx_eb:Temperature type="最高気温平年値" unit="度" refID="1" description="２０．５度">20.5</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温平年値" unit="度" refID="2" description="２０．３度">20.3</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温平年値" unit="度" refID="3" description="２０．２度">20.2</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温平年値" unit="度" refID="4" description="２０．０度">20.0</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温平年値" unit="度" refID="5" description="１９．８度">19.8</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温平年値" unit="度" refID="6" description="１９．７度">19.7</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温平年値" unit="度" refID="7" description="１９．５度">19.5</jmx_eb:Temperature>
+</TemperaturePart>
+</Property>
+</Kind>
+<Station>
+<Name>八丈島</Name>
+<Code>44263</Code>
+</Station>
+</Item>
+<Item>
+<Kind>
+<Property>
+<Type>最低気温平年値</Type>
+<TemperaturePart>
+<jmx_eb:Temperature type="最低気温平年値" unit="度" refID="1" description="２２．０度">22.0</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温平年値" unit="度" refID="2" description="２１．９度">21.9</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温平年値" unit="度" refID="3" description="２１．８度">21.8</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温平年値" unit="度" refID="4" description="２１．７度">21.7</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温平年値" unit="度" refID="5" description="２１．６度">21.6</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温平年値" unit="度" refID="6" description="２１．５度">21.5</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最低気温平年値" unit="度" refID="7" description="２１．４度">21.4</jmx_eb:Temperature>
+</TemperaturePart>
+</Property>
+<Property>
+<Type>最高気温平年値</Type>
+<TemperaturePart>
+<jmx_eb:Temperature type="最高気温平年値" unit="度" refID="1" description="２６．２度">26.2</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温平年値" unit="度" refID="2" description="２６．１度">26.1</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温平年値" unit="度" refID="3" description="２６．０度">26.0</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温平年値" unit="度" refID="4" description="２５．９度">25.9</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温平年値" unit="度" refID="5" description="２５．８度">25.8</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温平年値" unit="度" refID="6" description="２５．７度">25.7</jmx_eb:Temperature>
+<jmx_eb:Temperature type="最高気温平年値" unit="度" refID="7" description="２５．６度">25.6</jmx_eb:Temperature>
+</TemperaturePart>
+</Property>
+</Kind>
+<Station>
+<Name>父島</Name>
+<Code>44301</Code>
+</Station>
+</Item>
+</TimeSeriesInfo>
+</MeteorologicalInfos>
+<MeteorologicalInfos type="７日間平年値">
+<MeteorologicalInfo>
+<DateTime>2026-11-12T00:00:00+09:00</DateTime>
+<Duration>P7D</Duration>
+<Item>
+<Kind>
+<Property>
+<Type>降水量７日間合計階級閾値</Type>
+<PrecipitationClassPart>
+<jmx_eb:ThresholdOfMinimum type="降水量７日間合計階級最小値" unit="mm" description="０．０ミリ">0.0</jmx_eb:ThresholdOfMinimum>
+<jmx_eb:ThresholdOfSignificantlyBelowNormal type="降水量７日間合計階級かなり少ない" unit="mm" description="０．０ミリ">0.0</jmx_eb:ThresholdOfSignificantlyBelowNormal>
+<jmx_eb:ThresholdOfBelowNormal type="降水量７日間合計階級少ない" unit="mm" description="４．８ミリ">4.8</jmx_eb:ThresholdOfBelowNormal>
+<jmx_eb:ThresholdOfAboveNormal type="降水量７日間合計階級多い" unit="mm" description="２４．６ミリ">24.6</jmx_eb:ThresholdOfAboveNormal>
+<jmx_eb:ThresholdOfSignificantlyAboveNormal type="降水量７日間合計階級かなり多い" unit="mm" description="６３．８ミリ">63.8</jmx_eb:ThresholdOfSignificantlyAboveNormal>
+<jmx_eb:ThresholdOfMaximum type="降水量７日間合計階級最大値" unit="mm" description="１２８．５ミリ">128.5</jmx_eb:ThresholdOfMaximum>
+</PrecipitationClassPart>
+</Property>
+</Kind>
+<Station>
+<Name>東京</Name>
+<Code>44132</Code>
+</Station>
+</Item>
+<Item>
+<Kind>
+<Property>
+<Type>降水量７日間合計階級閾値</Type>
+<PrecipitationClassPart>
+<jmx_eb:ThresholdOfMinimum type="降水量７日間合計階級最小値" unit="mm" description="０．０ミリ">0.0</jmx_eb:ThresholdOfMinimum>
+<jmx_eb:ThresholdOfSignificantlyBelowNormal type="降水量７日間合計階級かなり少ない" unit="mm" description="０．４ミリ">0.4</jmx_eb:ThresholdOfSignificantlyBelowNormal>
+<jmx_eb:ThresholdOfBelowNormal type="降水量７日間合計階級少ない" unit="mm" description="１６．０ミリ">16.0</jmx_eb:ThresholdOfBelowNormal>
+<jmx_eb:ThresholdOfAboveNormal type="降水量７日間合計階級多い" unit="mm" description="５６．１ミリ">56.1</jmx_eb:ThresholdOfAboveNormal>
+<jmx_eb:ThresholdOfSignificantlyAboveNormal type="降水量７日間合計階級かなり多い" unit="mm" description="１１６．１ミリ">116.1</jmx_eb:ThresholdOfSignificantlyAboveNormal>
+<jmx_eb:ThresholdOfMaximum type="降水量７日間合計階級最大値" unit="mm" description="１５４．６ミリ">154.6</jmx_eb:ThresholdOfMaximum>
+</PrecipitationClassPart>
+</Property>
+</Kind>
+<Station>
+<Name>大島</Name>
+<Code>44172</Code>
+</Station>
+</Item>
+<Item>
+<Kind>
+<Property>
+<Type>降水量７日間合計階級閾値</Type>
+<PrecipitationClassPart>
+<jmx_eb:ThresholdOfMinimum type="降水量７日間合計階級最小値" unit="mm" description="３．２ミリ">3.2</jmx_eb:ThresholdOfMinimum>
+<jmx_eb:ThresholdOfSignificantlyBelowNormal type="降水量７日間合計階級かなり少ない" unit="mm" description="１２．７ミリ">12.7</jmx_eb:ThresholdOfSignificantlyBelowNormal>
+<jmx_eb:ThresholdOfBelowNormal type="降水量７日間合計階級少ない" unit="mm" description="３９．８ミリ">39.8</jmx_eb:ThresholdOfBelowNormal>
+<jmx_eb:ThresholdOfAboveNormal type="降水量７日間合計階級多い" unit="mm" description="８９．８ミリ">89.8</jmx_eb:ThresholdOfAboveNormal>
+<jmx_eb:ThresholdOfSignificantlyAboveNormal type="降水量７日間合計階級かなり多い" unit="mm" description="１５７．７ミリ">157.7</jmx_eb:ThresholdOfSignificantlyAboveNormal>
+<jmx_eb:ThresholdOfMaximum type="降水量７日間合計階級最大値" unit="mm" description="２４２．９ミリ">242.9</jmx_eb:ThresholdOfMaximum>
+</PrecipitationClassPart>
+</Property>
+</Kind>
+<Station>
+<Name>八丈島</Name>
+<Code>44263</Code>
+</Station>
+</Item>
+<Item>
+<Kind>
+<Property>
+<Type>降水量７日間合計階級閾値</Type>
+<PrecipitationClassPart>
+<jmx_eb:ThresholdOfMinimum type="降水量７日間合計階級最小値" unit="mm" description="０．１ミリ">0.1</jmx_eb:ThresholdOfMinimum>
+<jmx_eb:ThresholdOfSignificantlyBelowNormal type="降水量７日間合計階級かなり少ない" unit="mm" description="１．１ミリ">1.1</jmx_eb:ThresholdOfSignificantlyBelowNormal>
+<jmx_eb:ThresholdOfBelowNormal type="降水量７日間合計階級少ない" unit="mm" description="７．１ミリ">7.1</jmx_eb:ThresholdOfBelowNormal>
+<jmx_eb:ThresholdOfAboveNormal type="降水量７日間合計階級多い" unit="mm" description="２８．６ミリ">28.6</jmx_eb:ThresholdOfAboveNormal>
+<jmx_eb:ThresholdOfSignificantlyAboveNormal type="降水量７日間合計階級かなり多い" unit="mm" description="６３．７ミリ">63.7</jmx_eb:ThresholdOfSignificantlyAboveNormal>
+<jmx_eb:ThresholdOfMaximum type="降水量７日間合計階級最大値" unit="mm" description="１５７．７ミリ">157.7</jmx_eb:ThresholdOfMaximum>
+</PrecipitationClassPart>
+</Property>
+</Kind>
+<Station>
+<Name>父島</Name>
+<Code>44301</Code>
+</Station>
+</Item>
+</MeteorologicalInfo>
+</MeteorologicalInfos>
+</Body>
+</Report>
