@@ -237,6 +237,36 @@ def test_snapshot_clearing_retains_empty_cell_watermarks_after_roundtrip():
     assert len(changes) == 1 and changes[0].type == ChangeType.ISSUED
 
 
+def test_snapshot_and_city_lookup_do_not_scan_all_cells_after_restore(monkeypatch):
+    state = WarningState()
+    state.apply(weather("VPWW61", cities={A: [THUNDER], B: [THUNDER]}, issued=5, sent=5))
+    saved = state.to_json()
+    state = WarningState.from_json(saved)
+    assert state.to_json() == saved
+    assert set(json.loads(saved)) == {
+        "version",
+        "accept_status",
+        "last_updated",
+        "cells",
+        "rivers",
+        "seen",
+        "latest",
+    }
+
+    class NoFullScan(dict):
+        def items(self):
+            raise AssertionError("Snapshot items and city queries must use the city index")
+
+    # A deterministic complexity guard, independent of wall-clock/CI speed.
+    monkeypatch.setattr(state, "_cells", NoFullScan(state._cells))
+    state.apply(weather("VPWS50", cities={A: [kind("03", RAIN_LOW[1], time=10)]}, sent=10))
+    assert names(state.by_city(A)) == {RAIN_LOW[1]}
+    assert names(state.by_city(B)) == {THUNDER[1]}
+    # Replacing a cell via VPWW must keep the same index current too.
+    state.apply(weather("VPWW61", cities={A: [THUNDER]}, issued=11, sent=11))
+    assert names(state.cities()[A]) == {RAIN_LOW[1], THUNDER[1]}
+
+
 def test_snapshot_without_municipal_warning_clears_only_cells_not_newer_than_report():
     state = WarningState()
     state.apply(weather(cities={A: [RAIN]}, issued=5, sent=5))

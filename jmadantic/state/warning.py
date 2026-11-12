@@ -107,6 +107,8 @@ class WarningState:
     def __init__(self, *, accept_status: Iterable[str] = ("通常",)) -> None:
         self._ledger = _Ledger(accept_status)
         self._cells: dict[tuple[str, str], Cell] = {}
+        # Derived in-memory index; the version 1 JSON representation stays flat.
+        self._cells_by_city: dict[str, dict[str, Cell]] = {}
         self._rivers: dict[str, River] = {}
 
     @property
@@ -154,7 +156,8 @@ class WarningState:
             )
             if change is not None:
                 changes.append(change)
-        self._cells.update(cell_updates)
+        for key, cell in cell_updates.items():
+            self._set_cell(key, cell)
         for event_id, river in river_updates.items():
             if river is None:
                 self._rivers.pop(event_id, None)
@@ -163,6 +166,11 @@ class WarningState:
         self._ledger.commit(report)
         changes.sort(key=lambda change: (change.scope, change.area, change.group))
         return ApplyResult(True, None, tuple(changes))
+
+    def _set_cell(self, key: tuple[str, str], cell: Cell) -> None:
+        self._cells[key] = cell
+        city, group = key
+        self._cells_by_city.setdefault(city, {})[group] = cell
 
     def _weather_updates(self, report: Report, group: str) -> dict[tuple[str, str], Cell]:
         if not isinstance(report.body, MeteBody):
@@ -223,9 +231,9 @@ class WarningState:
             previous = self._cells.get(key)
             if previous is None or dates[group] >= previous.as_of:
                 updates[key] = Cell(frozenset(active), dates[group])
-        for key, cell in self._cells.items():
-            if key[0] == city and key[1] not in kinds and cell.as_of <= watermark:
-                updates[key] = Cell(frozenset(), watermark)
+        for group, cell in self._cells_by_city.get(city, {}).items():
+            if group not in kinds and cell.as_of <= watermark:
+                updates[(city, group)] = Cell(frozenset(), watermark)
         return updates
 
     def _river_update(self, report: Report, group: str) -> River | None:
@@ -256,7 +264,7 @@ class WarningState:
     def by_city(self, code: str) -> frozenset[WarningKind]:
         """Union exact weather cells with river coverage for this code or its parent."""
         result = {
-            kind for (city, _), cell in self._cells.items() if city == code for kind in cell.kinds
+            kind for cell in self._cells_by_city.get(code, {}).values() for kind in cell.kinds
         }
         parent = AREA_CITY_PARENT.get(code)
         for river in self._rivers.values():
@@ -267,7 +275,7 @@ class WarningState:
     def cities(self, pred: Predicate | None = None) -> Mapping[str, frozenset[WarningKind]]:
         """Return nonempty city selections, including subdivisions covered by rivers."""
         river_cities = {city for river in self._rivers.values() for city in river.cities}
-        codes = {city for city, _ in self._cells} | river_cities
+        codes = set(self._cells_by_city) | river_cities
         codes.update(child for child, parent in AREA_CITY_PARENT.items() if parent in river_cities)
         result: dict[str, frozenset[WarningKind]] = {}
         for code in sorted(codes):
@@ -329,7 +337,7 @@ class WarningState:
             for value in _array(data["cells"]):
                 record = _object(value)
                 key = (_string(record["city"]), _string(record["group"]))
-                state._cells[key] = Cell(_load_kinds(record["kinds"]), _time(record["as_of"]))
+                state._set_cell(key, Cell(_load_kinds(record["kinds"]), _time(record["as_of"])))
             for value in _array(data["rivers"]):
                 record = _object(value)
                 group = _string(record["group"])

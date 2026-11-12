@@ -350,3 +350,102 @@ AREA_CITY_PARENT：
 
 気象庁へのアクセス、M2b・M5の実装、公開操作、git commitは行っていない。
 M4の作業をここで終了する。
+
+## VPWS50 性能改善（2026-11-12）
+
+M5に着手する前に、性能改善と以下の検証を完了した。
+
+- 市町村 → グループ → Cell のメモリー内索引を追加した。
+  `_snapshot_item` は当該市町村のセルだけを参照し、全セルを走査しない。
+  by_city / cities の気象部分も同じ索引を使用する。
+- セルを置き換える経路を一箇所にまとめ、VPWW・VPWS50・JSON復元のすべてで索引を更新する。
+  索引は永続化せず、`to_json` のversion 1の形式・フィールドは変更していない。
+- `benchmarks/benchmark_vpws50.py` を追加。
+  全1,805市町村×7要素＝12,635セルを埋め、録画済みのVPWS50（1,805 Item）を適用する。
+  XMLパース・満杯状態の復元・結果のJSON化は計測区間に含めない。
+  毎回新しく復元した状態に適用し、DUPLICATEの短絡時間を測ることがないようにした。
+
+同じ入力・環境で各7回を測定した結果：
+
+| Python / OS | 適用時間の中央値 | 最小～最大 |
+|---|---:|---:|
+| 改善前：Python 3.13.7 / Windows 11 | 0.883198秒 | 0.844488～0.898943秒 |
+| 改善後：同上 | 0.079703秒 | 0.047332～0.109617秒 |
+
+この測定での短縮率は約91.0%、速度比は約11.1倍。
+各試行のChange件数は改善前後とも12,582件で、適用後のversion 1 JSONのSHA-256は
+いずれも `ced6ca6238598eeea526f014fd48fce80e34ecf698bb7bf59938fa38f97cd5d0` だった。
+測定値はこの環境での実測であり、CIの時間制限テストには使用しない。
+
+再実行コマンド：
+
+```sh
+uv run --offline python benchmarks/benchmark_vpws50.py --repeat 7
+```
+
+完了条件の実行結果：
+
+- 全セルのitems走査を禁止した辞書を使う回帰テストを追加し、JSON復元後のVPWS50・
+  VPWW更新・市町村照会が索引だけで動くことを確認した。version 1のフィールド集合も不変。
+- `uv run --offline pytest -q`：843件成功、skip / xfailなし。ゴールデン12ケースもすべて成功。
+- `uv run --offline ruff check` / `uv run --offline ruff format --check`：成功。
+- `uv run --offline pyright`：エラー0件・警告0件。
+- `uv run --offline pyright --verifytypes jmadantic --ignoreexternal`：100%。
+- git commit・公開操作は行っていない。続いてM5の一次資料確認と文書整備に進む。
+
+## M5 ドキュメントと0.1.0の配布検証（2026-11-12）
+
+依頼された範囲（README・CHANGELOG・バージョン0.1.0・人間向け公開手順）を完了した。
+
+- READMEを日本語で整備し、インストール、poll → fetch → parse → apply → ack、市町村照会、
+  JSON version 1の保存・復元、出典、加工主体、免責、開発コマンドを記載した。
+  `apply()` のValueErrorは電文IDと例外をログに残してackする。未ackなら同じ電文が返り続けることを説明した。
+  取得失敗は未ackのまま再取得し、解析不能な電文もログ付きでackする例とした。
+- 同じ処理の実行用サンプル `examples/poll_warnings.py` を追加。
+  `--offline-sample` はローカルの録画XMLと合成Atom応答だけで動作し、過去サンプルである旨も表示する。
+- `CHANGELOG.md` と、人間がTestPyPI → PyPIの順にTrusted Publishingを行う `RELEASING.md` を追加した。
+  公開用ワークフローの作成・登録・実行は行っていない。
+- `pyproject.toml` にREADMEを配布メタデータとして指定した。
+  既存の `pyproject.toml` と `jmadantic/_version.py` はともに0.1.0で、一致を確認した。
+
+出典表示の一次資料確認：
+
+- [気象庁「ご利用にあたって」](https://www.jma.go.jp/jma/kishou/info/coment.html) と、
+  同ページが指定する[公共データ利用規約（第1.0版）](https://www.digital.go.jp/resources/open_data/public_data_license_v1.0)
+  をブラウジングで確認できた。文言を推測していない。
+- 出典の記載例「出典：気象庁ホームページ（当該ページのURL）」に沿った表示を記載した。
+  加工した場合は加工した旨と加工主体を別途表示し、気象庁が加工物を作成したかのように示さない条件も反映した。
+  免責は気象庁の利用上の責任に関する記載と、本ソフトウェアの保証に関する説明を区別した。
+  防災判断は公式発表で確認する旨を記載した。
+- この確認は文書作成のための一次資料参照である。テスト・ベンチマーク・配布検証から気象庁への通信は行っていない。
+
+完了条件の実行結果（Windows / Python 3.13.7）：
+
+- `uv build --offline --no-sources`：sdistとwheelの作成に成功。
+  wheel内の生成クラス・コード表・状態管理・`py.typed`・READMEメタデータ、
+  sdist内のREADME・CHANGELOG・公開手順・実行例を確認した。vendor・tmp・開発用venvの混入はない。
+- `python -m venv tmp/m5-clean-3l00wra5` で新規venvを作成し、
+  そのPythonで `pip install --no-index --find-links tmp/m5-dependency-wheels dist/jmadantic-0.1.0-py3-none-any.whl`
+  を実行、成功した。依存のxsdata 26.10・lxml 6.1.3・typing-extensions 4.16.0は、
+  ローカルuvキャッシュの展開済みファイルを検証用wheelに再梱包して使った。
+  uvのオフライン索引解決では取得できなかったための措置で、ネットワークからの依存取得は行っていない。
+  `jmadantic` 本体は上記ビルドで生成したwheelをインストールした。
+- 新規venvのPythonを `-I` で実行し、READMEのPythonブロック3つをそのまま実行した。
+  HTTPだけを録画XMLの偽応答に置き換え、DNS・ソケット接続を禁止した状態で成功。
+  解析・適用・JSON復元後に0121400の警報集合を検証した。
+  import元が新規venvのsite-packagesであり、openpyxlが入っていないことも確認した。
+- 同じvenvでREADME記載の `examples/poll_warnings.py --offline-sample ... --city 0121400` を実行し、
+  レベル４大雨危険警報、過去サンプルの注意書き、出典と加工主体が表示された。`pip check` も成功。
+- `tests/test_readme_example.py` の7テスト成功。
+  READMEそのものの実行、実行例との処理関数の一致、成功時・applyのValueError時・解析エラー時のack、
+  取得失敗時の次回再返却、オフライン実行を確認した。
+- `uv run --offline pytest -q`：850件成功（39.13秒）。skip / xfailなし。
+  ゴールデン12ケースと、公式サンプル546件のstrict=Trueでの解析を含む。
+- `uv run --offline ruff check` / `uv run --offline ruff format --check`：成功（46ファイル整形済み）。
+- `uv run --offline pyright`：エラー0件・警告0件。
+- `uv run --offline pyright --verifytypes jmadantic --ignoreexternal`：100%。
+- 着手前とのSHA-256比較で `tests/golden/` 30ファイル、フィード素材6ファイル、
+  公式サンプル素材547ファイルはすべて一致。これらのgit diffもない。
+- ローカルで実行したPythonは3.13.7のみ。Python 3.11・3.12とリモートCIの実行結果は今回確認していない。
+
+M2b、git commit、TestPyPI・PyPIへの公開操作は行っていない。依頼された作業はここで終了する。
