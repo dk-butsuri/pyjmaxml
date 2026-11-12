@@ -467,3 +467,77 @@ uv run --offline python benchmarks/benchmark_vpws50.py --repeat 7
 - ローカルで実行したPythonは3.13.7のみ。Python 3.11・3.12とリモートCIの実行結果は今回確認していない。
 
 M2b、git commit、TestPyPI・PyPIへの公開操作は行っていない。依頼された作業はここで終了する。
+
+## 正規化 API の追加と非同期クライアント（2026-11-12）
+
+M5の後に、次の4つを追加した。いずれも計画（M0〜M5）の範囲外で、利用者の依頼で実装した。
+
+| コミット | 内容 |
+|---|---|
+| `7fec6db` | 警報級の可能性（VPFD60・VPFD61・VPFW60）の `warning_possibility()`。README の strict の既定値の誤記も修正 |
+| `112de8c` | 天気予報（VPFD51・VPFW50・VPFD50）の `weather_forecast()` |
+| `cc8d070` | 地震情報（VXSE51・VXSE52・VXSE53）の `earthquake_info()` |
+| `999ea84` | 非同期クライアント `AsyncFeedClient` と、通信エラーの `FeedTransportError` への統一 |
+
+### 正規化 API の共通方針
+
+- 電文1通を受け取り、区域（または地点・市町村・観測点）× 要素 × 時間帯の平らなセルの列に展開する。
+  状態は持たず、`Control/Status` も確認しない。訓練・試験の電文の除外は呼び出し側の責任とする。
+- 未知の値・要素は捨てずに `None` / `UNKNOWN` とし、警告ログを出す。元の文字列はセルに残す。
+- 対象外の電文と、`refID` が未定義などの構造の矛盾は `ValueError` にする。
+- `TimeDefines` の変換（タイムゾーン必須、年・月を含む期間は拒否）は `normalize/_time.py` に共通化した。
+
+### 実電文で確認したこと
+
+テスト用の実電文は、2026-11-12 にフィードから1回だけ取得した。テストと CI から気象庁へはアクセスしない。
+出典は各ディレクトリの README に記載した。
+
+- `tests/data/possibility/`（3通、東京都）：2026年の電文は、1つの府県に複数の一次細分区域が並ぶ。
+  公式サンプルは香川県の1区域だけで、この形を確かめられなかった。VPFW60 の `TimeDefine` には `Name` がない。
+- `tests/data/forecast/`（4通、東京・鹿児島・釧路）：天気・降水確率は区域、気温は地点（アメダス番号）ごとで、
+  電文に区域と地点の対応はない。VPFW50 の区域は、鹿児島県（奄美地方除く）460100、
+  釧路・根室・十勝地方014000 のように一次細分区域より粗いことがある。
+  `by_city()` は一次細分区域、府県予報区、上位区域（上3桁＋000）の順に探す。
+- `tests/data/earthquake/`（5通）：2026-11-08 01:04 静岡県西部（最大震度5強）の震度速報・震源・震源震度の第1〜2報と、
+  深さ「ごく浅い」の地震。「震度５弱以上未入電」は、観測点では `Int` の値そのものになる。
+  市町村では、`MaxInt` と並ぶ `Condition` の場合もある。後者を見落とさないよう `unreceived` に残す。
+- `Intensity` は順位の値（震度5強は6）を持つため、`str()` とf文字列は「震度5強」を返すようにした。
+- 緊急地震速報：eqvol 長期フィード（2026-11-05〜11-12 分）に VXSE43〜45 は1件もなかった。
+  PULL型フィードには配信されないと判断し、対象外とした。
+
+### 非同期クライアントと通信エラー
+
+- `AsyncFeedClient` は `FeedPoller` に非同期の通信部品をつなぐ薄い層で、同時リクエストは既定で4件まで。
+  通信部品は `AsyncHttpClient`（`async def send()`）で差し替えられる。
+  httpx は従来どおりオプションで、既定の `HttpxAsyncHttpClient` を作るときだけ必要。
+- 同梱のアダプター（urllib・httpx 同期・httpx 非同期）は、接続・タイムアウト・読み込み途中の切断を
+  `FeedTransportError`（`FeedError` の一種、元の例外は `__cause__`）に変換する。
+  以前の README の例は `(OSError, FeedError)` しか捕まえていなかった。
+  このため、httpx の通信エラーと urllib の `http.client.IncompleteRead` が漏れていた。
+- テストのネットワーク遮断で、Windows の asyncio がイベントループ用に作る `socketpair()`（ループバック接続）だけを許可した。
+  外部への接続と名前解決が禁止されたままであることを確かめるテストも追加した。
+
+### 完了条件の実行結果（Windows / Python 3.13.7、httpx 0.28.1）
+
+各コミットの時点で実行した。
+
+| コミット | pytest |
+|---|---|
+| `7fec6db` | 866件成功 |
+| `112de8c` | 893件成功（地震の変更を除いた状態で実行） |
+| `cc8d070` | 954件成功 |
+| `999ea84` | 976件成功 |
+
+- skip / xfail はない。ゴールデン12ケースと、公式サンプル546件の strict=True での解析を含む。
+- `uv run ruff check` / `uv run ruff format --check`：成功。
+- `uv run pyright`：エラー0件・警告0件。
+- `uv run pyright --verifytypes pyjmaxml --ignoreexternal`：100%。
+- README の正規化 API の例（警報級の可能性・天気予報・地震情報）は、手元で実行して出力を確認した。
+  自動テストで実行される README のブロックは、最初の例と非同期の例だけである。
+- `examples/poll_warnings.py --offline-sample ...` の実行に成功した。
+- ローカルで実行したのは Python 3.13.7 のみ。Python 3.11・3.12 とリモート CI の結果は確認していない。
+
+### その他
+
+- CI に `ruff format --check` を追加した。README の開発コマンドには記載があったが、CI では実行していなかった。
+- push・公開操作は行っていない。

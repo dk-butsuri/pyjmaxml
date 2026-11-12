@@ -13,6 +13,7 @@ jobs:
           python-version: ${{ matrix.python }}
       - run: uv sync --locked --all-extras
       - run: uv run ruff check
+      - run: uv run ruff format --check
       - run: uv run pyright
       - run: uv run pyright --verifytypes pyjmaxml --ignoreexternal
       - run: uv run pytest
