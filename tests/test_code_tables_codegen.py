@@ -186,4 +186,4 @@ def test_offline_codes_only_cli_uses_verified_cache_without_xsdata(tmp_path, mon
     monkeypatch.setattr("scripts.codegen.urllib.request.urlopen", forbidden)
     monkeypatch.setattr("scripts.codegen.subprocess.run", forbidden)
     main()
-    assert (tmp_path / "jmadantic/codes/_area_city.py").is_file()
+    assert (tmp_path / "pyjmaxml/codes/_area_city.py").is_file()

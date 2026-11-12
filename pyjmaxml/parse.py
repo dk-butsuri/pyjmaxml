@@ -110,7 +110,7 @@ def parse(data: bytes | str | os.PathLike[str], *, strict: bool = False) -> Repo
             raise ParseError(f"Unknown Body namespace: {namespace!r}")
         unknown_xml = ElementTree.tostring(body_xml, encoding="utf-8")
         parser = XmlParser(
-            context=XmlContext(models_package="jmadantic._generated"),
+            context=XmlContext(models_package="pyjmaxml._generated"),
             config=ParserConfig(
                 fail_on_unknown_properties=strict,
                 fail_on_converter_warnings=strict,

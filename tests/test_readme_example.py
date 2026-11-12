@@ -7,8 +7,8 @@ from unittest.mock import patch
 import pytest
 from feed_helpers import feed
 
-from jmadantic import WarningState
-from jmadantic.feed import FeedClient, FeedKind, HttpRequest, HttpResponse, UrllibHttpClient
+from pyjmaxml import WarningState
+from pyjmaxml.feed import FeedClient, FeedKind, HttpRequest, HttpResponse, UrllibHttpClient
 
 ROOT = Path(__file__).parents[1]
 SAMPLE = ROOT / "tests/data/samples/15_16_03_241226_VPWW55.xml"

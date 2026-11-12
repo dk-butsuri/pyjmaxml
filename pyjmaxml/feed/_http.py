@@ -42,14 +42,14 @@ class HttpxHttpClient:
     """Optional httpx transport; inject a Client to retain control of its lifetime.
 
     close() releases a client created by this adapter. Injected clients remain
-    owned by their caller. Importing jmadantic.feed does not import httpx.
+    owned by their caller. Importing pyjmaxml.feed does not import httpx.
     """
 
     def __init__(self, client: httpx.Client | None = None, *, timeout: float = 30.0) -> None:
         try:
             import httpx
         except ImportError as exc:
-            raise ImportError("HttpxHttpClient requires jmadantic[httpx]") from exc
+            raise ImportError("HttpxHttpClient requires pyjmaxml[httpx]") from exc
         self._client = client if client is not None else httpx.Client(timeout=timeout)
         self._owns_client = client is None
 

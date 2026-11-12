@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from jmadantic import UnknownBody, parse
+from pyjmaxml import UnknownBody, parse
 
 SAMPLES = sorted((Path(__file__).parent / "data" / "samples").glob("*.xml"))
 

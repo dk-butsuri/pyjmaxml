@@ -5,7 +5,7 @@ from xml.etree import ElementTree as ET
 
 import pytest
 
-from jmadantic import MeteBody, ParseError, UnknownBody, data_type_code, parse
+from pyjmaxml import MeteBody, ParseError, UnknownBody, data_type_code, parse
 
 SAMPLES = Path(__file__).parent / "data" / "samples"
 SOURCE = SAMPLES / "15_16_03_241226_VPWW55.xml"

@@ -7,7 +7,7 @@ from xml.etree import ElementTree as ET
 import pytest
 from feed_helpers import ATOM, feed, recorded
 
-from jmadantic.feed import (
+from pyjmaxml.feed import (
     FeedKind,
     FeedParseError,
     FeedPoller,
@@ -76,7 +76,7 @@ def test_urls_and_default_interval(kind, long):
     request = poller.next_request(NOW)
     assert request.method == "GET"
     assert request.url == f"https://www.data.jma.go.jp/developer/xml/feed/{kind.value}{suffix}.xml"
-    assert request.headers["User-Agent"] == f"jmadantic/{version('jmadantic')}"
+    assert request.headers["User-Agent"] == f"pyjmaxml/{version('pyjmaxml')}"
     seconds = 3600 if long else 60
     with pytest.raises(TooFrequentError):
         poller.next_request(NOW + timedelta(seconds=seconds, microseconds=-1))
@@ -232,7 +232,7 @@ def test_pending_limit_drops_oldest_without_ack_and_logs_warning(caplog):
     seen: set[str] = set()
     poller = FeedPoller(FeedKind.EXTRA, seen=seen)
     ids = [str(number) for number in range(1002)]
-    with caplog.at_level("WARNING", logger="jmadantic.feed._core"):
+    with caplog.at_level("WARNING", logger="pyjmaxml.feed._core"):
         result = poller.handle_response(HttpResponse(200, {}, feed(*ids, "0")), NOW)
     assert [entry.id for entry in result] == ids[2:]
     assert len(caplog.records) == 2
@@ -260,7 +260,7 @@ def test_ack_unknown_and_repeated_ids_and_restarting_only_preserves_seen():
 def test_default_and_custom_user_agent_for_feed_and_report(user_agent):
     poller = FeedPoller(FeedKind.EXTRA, user_agent=user_agent)
     entry = poller.handle_response(HttpResponse(200, {}, feed("a")), NOW)[0]
-    expected = f"jmadantic/{version('jmadantic')}" if user_agent is None else user_agent
+    expected = f"pyjmaxml/{version('pyjmaxml')}" if user_agent is None else user_agent
     assert poller.next_request(NOW).headers["User-Agent"] == expected
     assert poller.entry_request(entry).headers["User-Agent"] == expected
 
@@ -341,7 +341,7 @@ def test_message_headers_are_snapshots():
 
 
 def test_core_has_no_network_clock_or_thread_imports():
-    path = Path(__file__).parents[1] / "jmadantic" / "feed" / "_core.py"
+    path = Path(__file__).parents[1] / "pyjmaxml" / "feed" / "_core.py"
     tree = ast.parse(path.read_text(encoding="utf-8"))
     imports = set()
     for node in ast.walk(tree):

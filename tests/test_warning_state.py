@@ -7,7 +7,7 @@ from xml.etree import ElementTree as ET
 
 import pytest
 
-from jmadantic import (
+from pyjmaxml import (
     ChangeType,
     Element,
     SkipReason,
@@ -18,7 +18,7 @@ from jmadantic import (
     level_at_least,
     parse,
 )
-from jmadantic.codes import AREA_CITY_PARENT
+from pyjmaxml.codes import AREA_CITY_PARENT
 
 SHARED = Path(__file__).parent / "golden" / "_shared"
 NOW = datetime(2026, 11, 12, tzinfo=UTC)
@@ -405,7 +405,7 @@ def test_naive_persisted_time_is_rejected():
 
 
 def test_state_layer_has_no_network_filesystem_or_clock_access():
-    for path in (Path(__file__).parents[1] / "jmadantic" / "state").glob("*.py"):
+    for path in (Path(__file__).parents[1] / "pyjmaxml" / "state").glob("*.py"):
         for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
             if isinstance(node, ast.Import):
                 assert not {a.name.split(".")[0] for a in node.names} & {

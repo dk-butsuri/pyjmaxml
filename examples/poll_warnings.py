@@ -7,8 +7,8 @@ import logging
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
-from jmadantic import ParseError, WarningState, parse
-from jmadantic.feed import FeedClient, FeedError, FeedKind, HttpRequest, HttpResponse
+from pyjmaxml import ParseError, WarningState, parse
+from pyjmaxml.feed import FeedClient, FeedError, FeedKind, HttpRequest, HttpResponse
 
 logger = logging.getLogger(__name__)
 

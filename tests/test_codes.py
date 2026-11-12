@@ -1,7 +1,7 @@
 import ast
 from pathlib import Path
 
-from jmadantic.codes import (
+from pyjmaxml.codes import (
     AREA_CITY,
     AREA_CITY_PARENT,
     AREA_FLOOD_FORECAST,
@@ -28,7 +28,7 @@ def test_published_area_tables_and_leading_zeroes():
 
 
 def test_runtime_package_does_not_import_spreadsheet_libraries():
-    for path in (Path(__file__).parents[1] / "jmadantic").rglob("*.py"):
+    for path in (Path(__file__).parents[1] / "pyjmaxml").rglob("*.py"):
         for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
             if isinstance(node, ast.Import):
                 assert all(alias.name.split(".")[0] != "openpyxl" for alias in node.names)

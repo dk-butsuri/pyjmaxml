@@ -1,4 +1,4 @@
-# jmadantic 実装計画
+# pyjmaxml 実装計画
 
 仕様・方針は [plan.md](plan.md) を正とする。この文書は、それを**実装の手順・判断・完了条件**に落としたもの。
 一次資料の調査は 2026-11-11〜12 に実施した。資料が更新されたら、この文書も更新する。
@@ -10,7 +10,7 @@
 1. **`tests/golden/` の `case.json` と XML は変更禁止。** テストが通らないときは実装を直す。期待値が間違っていると思ったら、作業を止めて報告する
 2. **サンプル全件パースのテストは `strict=True` で通すこと。** `strict=False` に切り替える、テストを skip / xfail にする、対象からファイルを外す、例外を握りつぶす、といった方法で通してはいけない
 3. この文書と、実際の電文や一次資料が矛盾したら、**自分で設計を変えずに止まって報告する**。「どちらでもよい」と書いてあるところだけは、自分で判断してよい
-4. 公開 API（`jmadantic/__init__.py` から見えるもの）に `Any` / `object` を出さない。`pyright --verifytypes jmadantic --ignoreexternal` で確認する（外部ライブラリの型の不備は対象外。理由は §4）
+4. 公開 API（`pyjmaxml/__init__.py` から見えるもの）に `Any` / `object` を出さない。`pyright --verifytypes pyjmaxml --ignoreexternal` で確認する（外部ライブラリの型の不備は対象外。理由は §4）
 5. 1つのマイルストーンが終わるたびに、完了条件をすべて実行した結果を報告する
 6. 気象庁のサーバーに、テストや CI からアクセスしない（M2 で使うフィードは `tests/data/feed/` に用意済み）
 
@@ -99,16 +99,16 @@
 
 | 項目 | 決定 |
 |---|---|
-| パッケージ名 | `jmadantic`（PyPI 未使用。2026-11-11 に確認） |
+| パッケージ名 | `pyjmaxml`（PyPI 未使用。2026-11-12 に確認）。2026-11-12 に `jmadantic` から改名した。語尾の「-dantic」は pydantic を使ったライブラリの目印として使われているが、このライブラリは pydantic を使っていないため。`jma-xml` は、記号を除くと既存の `jmaxml` と同じになり PyPI で登録を拒否されうるので避けた |
 | Python | 3.11 以上（CI は 3.11 / 3.12 / 3.13） |
 | ツール | uv、hatchling、ruff、pyright（strict）、pytest、GitHub Actions |
-| 生成 | xsdata 26.10 に固定、`single-package`、出力先は `jmadantic/_generated/jmx.py` |
+| 生成 | xsdata 26.10 に固定、`single-package`、出力先は `pyjmaxml/_generated/jmx.py` |
 | Body の型 | 公開 API では `MeteBody \| SeisBody \| VolcBody \| UnknownBody` |
 | strict | `parse(data, *, strict=False)`。strict のときは `ParserConfig(fail_on_unknown_properties=True, fail_on_converter_warnings=True)` |
 | 時刻 | 公開 API では `datetime`（tz 付き）にする。xsdata の `XmlDateTime` を外に出さない |
-| HTTP | `HttpClient` Protocol。デフォルトは `urllib.request`、extra で `jmadantic[httpx]` |
+| HTTP | `HttpClient` Protocol。デフォルトは `urllib.request`、extra で `pyjmaxml[httpx]` |
 | 電文の取りこぼし | `poll()` では seen に記録しない。利用者が `ack()` したときに記録する。ack されていないものは 304 のときも含めて毎回返す |
-| User-Agent | 既定 `jmadantic/<version>`、`user_agent` 引数で上書き。リポジトリ URL は入れない |
+| User-Agent | 既定 `pyjmaxml/<version>`、`user_agent` 引数で上書き。リポジトリ URL は入れない |
 | 同期 / 非同期 | フィードは sans-IO（`FeedPoller`）＋ 薄い同期層（`FeedClient`）。非同期の `AsyncFeedClient` は M2b として後から足す。`parse` と状態管理は I/O なしなので、どちらからでも使える |
 | `apply` の戻り値 | `ApplyResult(applied: bool, skip_reason: SkipReason \| None, changes: tuple[Change, ...])`。plan.md の `list[Change]` から変更（スキップの理由をテストするため） |
 | 永続化 | `to_json() -> str` / `from_json(s) -> Self`。トップレベルに `"version": 1` を入れる。重複除去と新旧判定の記録も含める |
@@ -120,33 +120,33 @@
 ### M0. リポジトリの土台
 1. `git init`。`.gitignore` に `vendor/`、`.venv/`、`__pycache__/`、`dist/`
 2. `pyproject.toml`
-   - `[project]` name=jmadantic、requires-python=">=3.11"、dependencies=["xsdata>=26.10,<27", "lxml>=5"]
+   - `[project]` name=pyjmaxml、requires-python=">=3.11"、dependencies=["xsdata>=26.10,<27", "lxml>=5"]
    - optional：`httpx = ["httpx>=0.27"]`
    - dev（dependency-groups）：pytest、pyright、ruff、openpyxl、`xsdata[cli]`
-3. pyright：`strict = ["jmadantic"]`、`exclude = ["jmadantic/_generated"]`
-4. ruff：`extend-exclude = ["jmadantic/_generated"]`
+3. pyright：`strict = ["pyjmaxml"]`、`exclude = ["pyjmaxml/_generated"]`
+4. ruff：`extend-exclude = ["pyjmaxml/_generated"]`
 5. `.github/workflows/ci.yml`：`uv sync` → `ruff check` → `pyright` → `pytest`（3.11 / 3.12 / 3.13）
-6. `jmadantic/__init__.py`（空）と `jmadantic/py.typed`
+6. `pyjmaxml/__init__.py`（空）と `pyjmaxml/py.typed`
 - **完了条件**：ローカルで `uv run ruff check && uv run pyright && uv run pytest` が通る（テスト0件で OK）
 
 ### M1. codegen と parse
 1. `scripts/manifest.toml`：§0.1 の XSD・サンプル・コード表のファイル名と SHA-256（初回ダウンロード時に記録する）
 2. `scripts/codegen.py`（`uv run python scripts/codegen.py` で動くこと）
    - manifest のファイルを `vendor/` にダウンロードする（既にあり、SHA-256 が一致すれば取得しない）。展開も行う
-   - `xsdata generate vendor/schema/jmx.xsd --package jmadantic._generated.jmx --structure-style single-package` を実行する
+   - `xsdata generate vendor/schema/jmx.xsd --package pyjmaxml._generated.jmx --structure-style single-package` を実行する
    - **後処理**（生成された `jmx.py` を書き換える）：注釈に `Nullable` を含む `value` フィールドを、`value: <元の注釈> | None = field(default=None)` に変える。正規表現でも libcst でもよい
      - 書き換えた箇所の数を出力する。0件ならエラー終了にする（xsdata の出力形式が変わったことに気づくため）
-   - `Body1/2/3` などの連番クラスについて、`Meta.namespace` を見て、`jmadantic/_generated/aliases.py` に `MeteBody = Body2` のような別名を出力する（連番がずれても名前空間で対応付けるようにし、番号を決め打ちしない）
+   - `Body1/2/3` などの連番クラスについて、`Meta.namespace` を見て、`pyjmaxml/_generated/aliases.py` に `MeteBody = Body2` のような別名を出力する（連番がずれても名前空間で対応付けるようにし、番号を決め打ちしない）
    - 生成ファイルの先頭に、生成元のファイル名・SHA-256・xsdata のバージョンをコメントで入れる
    - サンプル zip を `tests/data/samples/` に展開する（XML だけ。コミットする）
-3. `jmadantic/parse.py`
+3. `pyjmaxml/parse.py`
    - `parse(data: bytes | str | os.PathLike[str], *, strict: bool = False) -> Report`
    - bytes の先頭が `1f 8b` なら gzip として展開する
    - `Report` は自前の frozen dataclass：`control: Control`、`head: Head`、`body: Body`、`raw: <生成された Report クラス>`
      - `Control`：title, date_time(datetime), status, editorial_office, publishing_office
      - `Head`：title, report_date_time, target_date_time, event_id(str、空なら ""), info_type, serial(str、空なら ""), info_kind, info_kind_version, headline_text
    - Body の名前空間が未知なら、strict=False のときは `UnknownBody(namespace: str, xml: bytes)`、strict=True のときは `ParseError`
-4. `jmadantic/kinds.py`：`data_type_code(report) -> str | None`
+4. `pyjmaxml/kinds.py`：`data_type_code(report) -> str | None`
    - 対応表は `jmaxml_guide_20260430_head_control_list.pdf` から作る（Control/Title → データ種類コード）。少なくとも次の電文は必ず含める
      - `気象警報・注意報（Ｒ０６）（大雨）` → VPWW55 …（その他注意報）→ VPWW61
      - `気象警報・注意報（Ｒ０６）（集約通報）` → VPWS50
@@ -165,7 +165,7 @@
 ### M2. フィード
 I/O を持たない中核（`FeedPoller`）と、通信だけを担当する薄い層（`FeedClient`）に分ける（sans-IO）。非同期版は、通信層を1つ足すだけで作れるようにしておく。
 
-1. `jmadantic/feed/_core.py`（**I/O なし**。ネットワーク・時計・スレッドに触らない）
+1. `pyjmaxml/feed/_core.py`（**I/O なし**。ネットワーク・時計・スレッドに触らない）
    - `FeedKind`（REGULAR / EXTRA / EQVOL / OTHER）と `long: bool` から URL を組み立てる
    - `Entry`（frozen）：id, title, updated(datetime), author, url
    - `HttpRequest`（frozen）：method, url, headers。`HttpResponse`（frozen）：status, headers, body(bytes)
@@ -182,15 +182,15 @@ I/O を持たない中核（`FeedPoller`）と、通信だけを担当する薄�
      - `entry_request(entry) -> HttpRequest`：電文本体を取得するリクエストを組み立てる
    - 最小間隔：高頻度 60秒、長期 3600秒。`min_interval` で長くはできるが、短くするには `unsafe_min_interval=True` が必要
    - `SeenStore` Protocol（`__contains__`、`add`）。デフォルトは上限 10,000件の LRU
-   - User-Agent：既定は `jmadantic/<version>`。`user_agent` 引数で上書きできる（運用者が連絡先を入れるため）。空文字はエラー。リポジトリ URL は入れない。ヘッダーは `next_request` / `entry_request` で付ける
-2. `jmadantic/feed/_sync.py`：`FeedClient(kind, *, long=False, http=None, seen=None, clock=None, user_agent=None, ...)`
-   - `HttpClient` Protocol：`send(req: HttpRequest) -> HttpResponse`。デフォルトは `urllib.request` の実装。`jmadantic[httpx]` が入っていれば httpx の実装も選べる
+   - User-Agent：既定は `pyjmaxml/<version>`。`user_agent` 引数で上書きできる（運用者が連絡先を入れるため）。空文字はエラー。リポジトリ URL は入れない。ヘッダーは `next_request` / `entry_request` で付ける
+2. `pyjmaxml/feed/_sync.py`：`FeedClient(kind, *, long=False, http=None, seen=None, clock=None, user_agent=None, ...)`
+   - `HttpClient` Protocol：`send(req: HttpRequest) -> HttpResponse`。デフォルトは `urllib.request` の実装。`pyjmaxml[httpx]` が入っていれば httpx の実装も選べる
    - `poll() -> list[Entry]`：`next_request` → `http.send` → `handle_response` を行うだけ
    - `fetch(entry) -> bytes`：`entry_request` → `http.send` → body を返す（gzip のままでもよい。`parse` が対応している）。**fetch は ack しない**
    - `ack(entry: Entry | str) -> None`：`FeedPoller.ack` をそのまま呼ぶ
    - 使い方の例（README にも載せる）：`for e in client.poll(): data = client.fetch(e); state.apply(parse(data)); client.ack(e)`
    - **ロジックを書かない**。分岐が必要になったら `_core.py` に入れる
-3. `jmadantic/feed/__init__.py`：`FeedKind`、`Entry`、`FeedPoller`、`FeedClient`、`SeenStore`、`TooFrequentError` を再エクスポートする
+3. `pyjmaxml/feed/__init__.py`：`FeedKind`、`Entry`、`FeedPoller`、`FeedClient`、`SeenStore`、`TooFrequentError` を再エクスポートする
 4. テスト
    - `tests/test_feed_core.py`：`FeedPoller` を直接テストする（200 → 304 → 新しいエントリーあり、重複 id、間隔違反、ヘッダー）。`now` は引数で渡す
    - `tests/test_feed_sync.py`：偽の `HttpClient` で `FeedClient` が `FeedPoller` に正しく橋渡ししていることだけ確認する
@@ -206,16 +206,16 @@ I/O を持たない中核（`FeedPoller`）と、通信だけを担当する薄�
 - **完了条件**：上のテストが通る。ネットワークにアクセスするテストはない。`_core.py` が `urllib`・`httpx`・`time`・`socket` を import していない（テストで確認する）
 
 #### M2b. 非同期（今は作らない。必要になったら追加）
-- `jmadantic/feed/_async.py`：`AsyncFeedClient`。`AsyncHttpClient` Protocol（`async def send(req) -> HttpResponse`）、デフォルト実装は `httpx.AsyncClient`（extra 必須）
+- `pyjmaxml/feed/_async.py`：`AsyncFeedClient`。`AsyncHttpClient` Protocol（`async def send(req) -> HttpResponse`）、デフォルト実装は `httpx.AsyncClient`（extra 必須）
 - `poll()` / `fetch()` を `async def` にして、中身は `_sync.py` と同じ橋渡しだけにする（`ack()` は同期のまま）。`FeedPoller` は共有する
 - テストは `tests/test_feed_async.py` で橋渡しだけ確認する（`FeedPoller` のテストは使い回す）
 - `parse` と `WarningState` は I/O をしないので、非同期版は不要
 
 ### M3. コード表と正規化
-1. `scripts/codegen.py` に追加：コード表の xlsx から `jmadantic/codes/_area_city.py` などを生成する（中身は dict 定数。**実行時に openpyxl を使わない**）
+1. `scripts/codegen.py` に追加：コード表の xlsx から `pyjmaxml/codes/_area_city.py` などを生成する（中身は dict 定数。**実行時に openpyxl を使わない**）
    - `AreaInformationCity-AreaForecastLocalM`：市町村等コード → (名称, 府県予報区コード, 一次細分区域コード)
    - `AreaFloodForecast`、`AreaWaterLevelWarning`：予報区域・発表区間コード → 名称
-2. `jmadantic/normalize/warning.py`
+2. `pyjmaxml/normalize/warning.py`
    - `Element`：HEAVY_RAIN, LANDSLIDE, STORM_SURGE, STORM, SNOWSTORM, HIGH_WAVE, HEAVY_SNOW, FLOOD, OTHER, UNKNOWN
    - `Stage`（IntEnum、この順に大きい）：ADVISORY, WARNING, DANGER_WARNING, EMERGENCY
    - `WarningKind`（frozen dataclass）：`name: str`、`code: str`、`group: str`（"VPWW55"…"VPWW61"、"VXKO"、"VXSU"）、`element: Element`、`stage: Stage | None`、`level: int | None`
@@ -357,8 +357,8 @@ state.last_updated -> datetime | None                         # 最後に適用�
   | g08 | VXKO の発表 → 引上げ（UPGRADED）→ 取消 |
   | g09 | VXSU の発表 → 解除 |
   | g10 | to_json / from_json の往復と、重複除去の記録の引き継ぎ |
-- `pyright --verifytypes jmadantic --ignoreexternal` で、公開 API の型の完全性を 100% にする
-  - `--ignoreexternal` を付ける理由：`Report.raw`（xsdata の生成クラス）から、xsdata 26.10 の `XmlDuration.asdict()` が見える。この戻り値の注釈が型引数なしの `dict` なので、外部の型を含めると 85.3% になる（2026-11-12 に確認）。jmadantic 自身のコードに `Any` を出さないことが目的で、外部ライブラリの注釈の不備は対象外とする。外部の型のスタブは自前で書かない
+- `pyright --verifytypes pyjmaxml --ignoreexternal` で、公開 API の型の完全性を 100% にする
+  - `--ignoreexternal` を付ける理由：`Report.raw`（xsdata の生成クラス）から、xsdata 26.10 の `XmlDuration.asdict()` が見える。この戻り値の注釈が型引数なしの `dict` なので、外部の型を含めると 85.3% になる（2026-11-12 に確認）。pyjmaxml 自身のコードに `Any` を出さないことが目的で、外部ライブラリの注釈の不備は対象外とする。外部の型のスタブは自前で書かない
 
 ---
 

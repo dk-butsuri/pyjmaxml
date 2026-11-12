@@ -1,4 +1,4 @@
-# jmadantic
+# pyjmaxml
 
 気象庁防災情報XMLの型付きパーサー、PULL型フィードのクライアントと警報の状態管理です。
 Python 3.11以上に対応します。バージョン0.1.0は公開準備中です。
@@ -24,8 +24,8 @@ python -m pip install '.[httpx]'
 ```python
 import logging
 
-from jmadantic import ParseError, WarningState, parse
-from jmadantic.feed import FeedClient, FeedError, FeedKind
+from pyjmaxml import ParseError, WarningState, parse
+from pyjmaxml.feed import FeedClient, FeedError, FeedKind
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +83,7 @@ python examples/poll_warnings.py --offline-sample tests/data/samples/15_16_03_24
 - `FeedKind.EXTRA` はVPWW55〜61等、`FeedKind.REGULAR` はVPWS50を含みます。
   状態は受け取った電文の範囲だけです。開始時・再起動時は長期フィードも使い、両方を同じ状態に適用してください。
   空の結果だけで「警報なし」と判断することはできません。
-- User-Agentの既定値は `jmadantic/<version>` です。`user_agent` で上書きでき、空文字は指定できません。
+- User-Agentの既定値は `pyjmaxml/<version>` です。`user_agent` で上書きでき、空文字は指定できません。
 
 `WarningState` はVPWW55〜61・VPWS50・VXKO・VXSUを扱い、既定では `Control/Status="通常"` のみを受理します。
 旧形式のVPWW53/54と時系列のVPWP50は対象外です。`by_city(code)` は発表中の `WarningKind` 集合、
@@ -92,7 +92,7 @@ python examples/poll_warnings.py --offline-sample tests/data/samples/15_16_03_24
 ```python
 from pathlib import Path
 
-from jmadantic import WarningState
+from pyjmaxml import WarningState
 
 saved = Path("warning-state.json")
 saved.write_text(state.to_json(), encoding="utf-8")
@@ -109,7 +109,7 @@ JSON形式はversion 1です。状態と電文の重複除去記録を保存し�
 ```python
 from pathlib import Path
 
-from jmadantic import parse
+from pyjmaxml import parse
 
 report = parse(Path("tests/data/samples/15_16_03_241226_VPWW55.xml"))
 print(report.control.title, report.head.report_date_time)
@@ -149,7 +149,7 @@ uv run pytest
 uv run ruff check
 uv run ruff format --check
 uv run pyright
-uv run pyright --verifytypes jmadantic --ignoreexternal
+uv run pyright --verifytypes pyjmaxml --ignoreexternal
 uv run python scripts/codegen.py --offline --codes-only
 uv run python benchmarks/benchmark_vpws50.py --repeat 7
 ```

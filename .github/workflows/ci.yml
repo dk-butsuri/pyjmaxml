@@ -14,5 +14,5 @@ jobs:
       - run: uv sync --locked --all-extras
       - run: uv run ruff check
       - run: uv run pyright
-      - run: uv run pyright --verifytypes jmadantic --ignoreexternal
+      - run: uv run pyright --verifytypes pyjmaxml --ignoreexternal
       - run: uv run pytest

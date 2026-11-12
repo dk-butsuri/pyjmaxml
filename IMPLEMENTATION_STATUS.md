@@ -1,5 +1,7 @@
 # 実装状況（2026-11-12）
 
+> **2026-11-12：パッケージ名を `jmadantic` から `pyjmaxml` に改名した。** 以下の記録は改名前に書かれたもので、`jmadantic` はすべて `pyjmaxml` と読み替える。
+
 ## M0
 
 実装済み。Git 初期化、uv/hatchling、依存ロック、ruff、pyright strict、

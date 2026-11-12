@@ -3,7 +3,7 @@ from xml.etree import ElementTree as ET
 
 import pytest
 
-from jmadantic import (
+from pyjmaxml import (
     Element,
     Predicate,
     Stage,
@@ -176,7 +176,7 @@ def test_levels_are_read_from_labels_only_for_the_designated_elements():
 @pytest.mark.parametrize("code", ["04", "18", "42", "45", "46", "47", "99"])
 def test_unknown_meteorological_codes_are_preserved_and_logged(code, caplog):
     name = "レベル５未知の警報"
-    with caplog.at_level("WARNING", logger="jmadantic.normalize.warning"):
+    with caplog.at_level("WARNING", logger="pyjmaxml.normalize.warning"):
         kind = classify_mete(code, name)
     assert kind == WarningKind(name, code, "", Element.UNKNOWN, None, None)
     assert any(code in record.message for record in caplog.records)

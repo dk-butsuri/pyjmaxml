@@ -5,7 +5,7 @@ from urllib.error import HTTPError, URLError
 
 import pytest
 
-from jmadantic.feed import (
+from pyjmaxml.feed import (
     FeedClient,
     FeedKind,
     HttpRequest,
@@ -17,7 +17,7 @@ from jmadantic.feed import (
 REQUEST = HttpRequest(
     "GET",
     "https://example.test/feed.xml",
-    {"User-Agent": "jmadantic/test", "If-None-Match": 'W/"cached"'},
+    {"User-Agent": "pyjmaxml/test", "If-None-Match": 'W/"cached"'},
 )
 
 
@@ -37,7 +37,7 @@ def test_urllib_adapts_request_and_closes_response(monkeypatch):
         calls.append((request, timeout))
         return response
 
-    monkeypatch.setattr("jmadantic.feed._http.urlopen", fake_urlopen)
+    monkeypatch.setattr("pyjmaxml.feed._http.urlopen", fake_urlopen)
     result = UrllibHttpClient(timeout=12).send(REQUEST)
     assert result == HttpResponse(200, {"ETag": 'W/"new"'}, b"XML bytes")
     request, timeout = calls[0]
@@ -60,7 +60,7 @@ def test_urllib_returns_http_error_responses_for_core_to_interpret(status, monke
     def fake_urlopen(request, *, timeout):
         raise error
 
-    monkeypatch.setattr("jmadantic.feed._http.urlopen", fake_urlopen)
+    monkeypatch.setattr("pyjmaxml.feed._http.urlopen", fake_urlopen)
     result = UrllibHttpClient().send(REQUEST)
     assert result.status == status
     assert result.headers["ETag"] == 'W/"unchanged"'
@@ -74,7 +74,7 @@ def test_urllib_transport_errors_are_not_hidden(monkeypatch):
     def fake_urlopen(request, *, timeout):
         raise error
 
-    monkeypatch.setattr("jmadantic.feed._http.urlopen", fake_urlopen)
+    monkeypatch.setattr("pyjmaxml.feed._http.urlopen", fake_urlopen)
     with pytest.raises(URLError) as caught:
         UrllibHttpClient().send(REQUEST)
     assert caught.value is error
@@ -116,5 +116,5 @@ def test_httpx_is_optional_and_has_actionable_import_error(monkeypatch):
     monkeypatch.setitem(sys.modules, "httpx", None)
     # The default client still constructs without the optional dependency.
     FeedClient(FeedKind.EXTRA)
-    with pytest.raises(ImportError, match=r"jmadantic\[httpx\]"):
+    with pytest.raises(ImportError, match=r"pyjmaxml\[httpx\]"):
         HttpxHttpClient()

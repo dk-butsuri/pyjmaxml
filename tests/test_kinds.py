@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from jmadantic import data_type_code, parse
+from pyjmaxml import data_type_code, parse
 
 SHARED = Path(__file__).parent / "golden" / "_shared"
 

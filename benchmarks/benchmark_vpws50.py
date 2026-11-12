@@ -15,8 +15,8 @@ import sys
 from pathlib import Path
 from time import perf_counter
 
-from jmadantic import MeteBody, WarningState, parse
-from jmadantic.codes import AREA_CITY
+from pyjmaxml import MeteBody, WarningState, parse
+from pyjmaxml.codes import AREA_CITY
 
 
 def full_state_json() -> str:

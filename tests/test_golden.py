@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from jmadantic import WarningState, parse
+from pyjmaxml import WarningState, parse
 
 CASES = sorted((Path(__file__).parent / "golden").glob("*/case.json"))
 assert len(CASES) == 12, "The pinned golden corpus must contain all 12 cases"

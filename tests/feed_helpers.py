@@ -2,7 +2,7 @@ from email.parser import Parser
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
-from jmadantic.feed import HttpResponse
+from pyjmaxml.feed import HttpResponse
 
 DATA = Path(__file__).parent / "data" / "feed"
 ATOM = "{http://www.w3.org/2005/Atom}"

@@ -7,8 +7,8 @@ from unittest.mock import patch
 import pytest
 from feed_helpers import feed, recorded
 
-from jmadantic import parse
-from jmadantic.feed import (
+from pyjmaxml import parse
+from pyjmaxml.feed import (
     Entry,
     FeedClient,
     FeedKind,
@@ -190,7 +190,7 @@ def test_fetch_forwards_request_and_returns_bytes_accepted_by_parse(compressed):
     assert parse(result, strict=True).control.title == "気象警報・注意報（Ｒ０６）（大雨）"
     assert http.requests[0].url == ENTRY.url
     assert http.requests[0].method == "GET"
-    assert http.requests[0].headers["User-Agent"].startswith("jmadantic/")
+    assert http.requests[0].headers["User-Agent"].startswith("pyjmaxml/")
 
 
 @pytest.mark.parametrize("status", [304, 404, 503])
@@ -208,14 +208,14 @@ def test_default_clock_supplies_aware_datetimes():
 
 
 def test_default_transport_is_created_without_sending_requests():
-    with patch("jmadantic.feed._sync.UrllibHttpClient", autospec=True) as transport:
+    with patch("pyjmaxml.feed._sync.UrllibHttpClient", autospec=True) as transport:
         FeedClient(FeedKind.EXTRA)
         transport.assert_called_once_with()
         transport.return_value.send.assert_not_called()
 
 
 def test_poll_and_fetch_contain_only_bridging_without_branches():
-    path = Path(__file__).parents[1] / "jmadantic" / "feed" / "_sync.py"
+    path = Path(__file__).parents[1] / "pyjmaxml" / "feed" / "_sync.py"
     tree = ast.parse(path.read_text(encoding="utf-8"))
     methods = [
         node

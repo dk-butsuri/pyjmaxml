@@ -7,7 +7,7 @@ TestPyPI・PyPIへのアップロードはまだ行っていません。
 
 1. PyPIでのプロジェクト名の利用可否、作者・ライセンス・URL等の配布メタデータを確認する。
    気象庁コンテンツの利用規約は、ライブラリ自体のコードのライセンスを定めるものではない。
-2. `pyproject.toml` と `jmadantic/_version.py` がともに `0.1.0` であること、
+2. `pyproject.toml` と `pyjmaxml/_version.py` がともに `0.1.0` であること、
    READMEの出典表示とCHANGELOGを確認する。
 3. READMEの開発コマンドでテスト・型検査を行う。Python 3.11・3.12・3.13のCI結果も確認する。
    テスト・CIから気象庁へアクセスしない。`tests/golden/` を変更しない。
@@ -17,7 +17,7 @@ TestPyPI・PyPIへのアップロードはまだ行っていません。
 uv build --no-sources
 python -m venv .release-check
 # Windowsでは以下のPythonを .release-check/Scripts/python.exe に置き換える
-.release-check/bin/python -m pip install dist/jmadantic-0.1.0-py3-none-any.whl
+.release-check/bin/python -m pip install dist/pyjmaxml-0.1.0-py3-none-any.whl
 .release-check/bin/python examples/poll_warnings.py --offline-sample tests/data/samples/15_16_03_241226_VPWW55.xml --city 0121400
 ```
 
@@ -41,7 +41,7 @@ wheelに生成クラス・コード表・`py.typed` があること、sdistにRE
 
 ```sh
 python -m pip install 'xsdata>=26.10,<27' 'lxml>=5'
-python -m pip install --index-url https://test.pypi.org/simple/ --no-deps jmadantic==0.1.0
+python -m pip install --index-url https://test.pypi.org/simple/ --no-deps pyjmaxml==0.1.0
 python examples/poll_warnings.py --offline-sample tests/data/samples/15_16_03_241226_VPWW55.xml --city 0121400
 ```
 
@@ -49,7 +49,7 @@ python examples/poll_warnings.py --offline-sample tests/data/samples/15_16_03_24
 
 1. TestPyPIの結果を確認後、PyPI側にも別途Trusted Publisherを設定する。
 2. 同じSHA-256の配布物を使い、公開ジョブの `repository-url` を省略してPyPIへ送る設定をレビューする。
-3. 人間が宛先と配布物を確認して実行する。新規venvで `pip install jmadantic==0.1.0` と
+3. 人間が宛先と配布物を確認して実行する。新規venvで `pip install pyjmaxml==0.1.0` と
    オフラインの使用例を確認する。
 4. 実際の公開後にREADMEのインストール手順とCHANGELOGの公開日を更新する。
 

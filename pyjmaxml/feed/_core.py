@@ -17,7 +17,7 @@ from .._version import __version__
 
 _ATOM = "{http://www.w3.org/2005/Atom}"
 _FEED_BASE = "https://www.data.jma.go.jp/developer/xml/feed/"
-_USER_AGENT = f"jmadantic/{__version__}"
+_USER_AGENT = f"pyjmaxml/{__version__}"
 _LOGGER = logging.getLogger(__name__)
 
 
