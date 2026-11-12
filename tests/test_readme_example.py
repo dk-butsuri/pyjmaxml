@@ -49,14 +49,22 @@ def test_readme_example_runs_with_local_sample(capsys):
     assert "実行者が加工して作成" in output
 
 
-def test_runnable_example_uses_the_readme_processing_function():
+def test_runnable_example_keeps_the_readme_processing_body():
     example = ast.parse((ROOT / "examples/poll_warnings.py").read_text(encoding="utf-8"))
     readme = ast.parse(BLOCK)
     functions = [
         next(node for node in tree.body if isinstance(node, ast.FunctionDef))
         for tree in (example, readme)
     ]
-    assert ast.dump(functions[0]) == ast.dump(functions[1])
+    # The script additionally forwards an explicit clock value for online runs.
+    # All fetch/parse/apply/ack control flow must stay the same as the README.
+    for node in ast.walk(functions[0]):
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+            if node.func.attr == "apply":
+                node.keywords = [keyword for keyword in node.keywords if keyword.arg != "now"]
+    assert [ast.dump(node) for node in functions[0].body] == [
+        ast.dump(node) for node in functions[1].body
+    ]
 
 
 @pytest.mark.parametrize("failure", [None, "apply", "parse", "fetch"])
@@ -118,6 +126,34 @@ def test_offline_script_uses_only_injected_http(monkeypatch, capsys):
     assert "現在の発表状況ではありません" in capsys.readouterr().out
 
 
+@pytest.mark.parametrize("offline", [False, True])
+def test_script_only_supplies_current_time_online(monkeypatch, offline):
+    spec = importlib.util.spec_from_file_location(
+        "poll_warnings", ROOT / "examples/poll_warnings.py"
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    seen = set()
+    client = FeedClient(FeedKind.EXTRA, http=FakeHttp(SAMPLE.read_bytes()), seen=seen)
+    state = WarningState()
+    monkeypatch.setattr(module, "FeedClient", lambda *args, **kwargs: client)
+    monkeypatch.setattr(module, "WarningState", lambda: state)
+    argv = ["poll_warnings"] + (["--offline-sample", str(SAMPLE)] if offline else [])
+    monkeypatch.setattr("sys.argv", argv)
+    before = datetime.now(UTC)
+    with patch.object(state, "apply", wraps=state.apply) as apply:
+        module.main()
+    supplied_now = apply.call_args.kwargs["now"]
+    if offline:
+        assert supplied_now is None
+        assert state.by_city("0121400")
+    else:
+        assert before <= supplied_now <= datetime.now(UTC)
+        assert not state.by_city("0121400")
+    assert seen == {"sample"}  # Time-rejected reports are also acknowledged.
+
+
 ASYNC_BLOCK = next(
     block.split("```", 1)[0]
     for block in README.split("```python\n")[1:]
@@ -143,7 +179,7 @@ def test_readme_async_example(failure):
         def __init__(self) -> None:
             self.responses = iter(
                 [
-                    HttpResponse(200, {}, feed("sample", "broken")),
+                    HttpResponse(200, {}, feed("broken", "sample")),
                     HttpResponse(200, {}, SAMPLE.read_bytes()),
                     FeedTransportError("test fetch failure")
                     if failure

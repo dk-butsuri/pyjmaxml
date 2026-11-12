@@ -3,11 +3,13 @@
 ## 0.1.0（公開準備中）
 
 - 気象庁防災情報XMLの型付きパース、gzip入力、未知のBodyの保持。
-- PULL型フィードの条件付きGET、未処理の再返却、明示的なack。
+- PULL型フィードの条件付きGET、未処理の再返却（`updated` の古い順）、明示的なack。
 - `AsyncFeedClient`（非同期クライアント、同時リクエスト数の上限つき）と `HttpxAsyncHttpClient`。
 - 同梱の通信アダプターが、接続・タイムアウト・読み込み途中の切断を `FeedTransportError` に変換する。
 - 配布コード表から生成した市町村等・河川の辞書と警報種別の正規化。
 - VPWW55〜61・VPWS50・VXKO・VXSUの状態管理、差分、JSON version 1での保存・復元。
+- VPWS50の「発表なし」を時刻つきで保持し、遅れて届いた古い電文による警報の復活を防止。
+- `apply(now=...)` で古すぎる・未来すぎる電文を破棄。判定の基準は変更・無効化可能。
 - VPFD60・VPFD61・VPFW60（警報級の可能性）を区域・要素・時間帯ごとに展開する `warning_possibility()`。
 - VPFD50・VPFD51・VPFW50（府県天気予報・府県週間天気予報）を区域または地点・要素・時間帯ごとに展開する
   `weather_forecast()`。

@@ -1,3 +1,4 @@
+from collections.abc import Mapping
 from email.parser import Parser
 from pathlib import Path
 from xml.etree import ElementTree as ET
@@ -17,14 +18,15 @@ def recorded(kind: str, status: int = 200) -> HttpResponse:
     return HttpResponse(status, dict(Parser().parsestr(headers).items()), body)
 
 
-def feed(*ids: str) -> bytes:
+def feed(*ids: str, updated: Mapping[str, str] | None = None) -> bytes:
+    """Build an Atom feed; entries share one timestamp unless updated names one."""
     root = ET.Element(ATOM + "feed")
     for entry_id in ids:
         entry = ET.SubElement(root, ATOM + "entry")
         for name, value in [
             ("id", entry_id),
             ("title", "テスト電文"),
-            ("updated", "2026-11-12T00:00:00+09:00"),
+            ("updated", (updated or {}).get(entry_id, "2026-11-12T00:00:00+09:00")),
         ]:
             ET.SubElement(entry, ATOM + name).text = value
         author = ET.SubElement(entry, ATOM + "author")

@@ -541,3 +541,85 @@ M5の後に、次の4つを追加した。いずれも計画（M0〜M5）の範�
 
 - CI に `ruff format --check` を追加した。README の開発コマンドには記載があったが、CI では実行していなかった。
 - push・公開操作は行っていない。
+
+## フィードの返却順：古い順に並べ替え（2026-11-12）
+
+気象庁の Atom フィードは新しい順に並ぶ。これまで `poll()` はその順のまま未処理を返していた。
+そのため例のとおり順に `apply()` すると、1回のポーリングに同じ情報の電文が複数あった場合、
+古い方が `stale` になり、途中の発表・切り替えの `Change` が出なかった。最終状態は正しかった。
+
+- `FeedPoller.handle_response` は、応答内の新規エントリーを `updated` の古い順に未処理へ積む。
+  時刻が同じものはフィード上で後ろ（古い側）を先にする。
+- 返却は全未処理を `updated` の古い順に並べる（安定ソート）。後の応答でより古いエントリーが現れても古い順になる。
+- 上限1,000件の超過時は、発見順ではなく `updated` が最も古いものを破棄する。
+  従来は1回の応答内で最も新しいものを破棄していた。
+- テスト用の `feed()` に `updated` 引数を追加した。既存テストの期待値は、気象庁と同じ新しい順のフィードを前提に直した。
+- README・CHANGELOG に返却順と、逆順適用で `Change` が欠ける旨を記載した。
+
+検証：`uv run pytest` 978件成功、`uv run ruff check` / `ruff format --check` 成功、
+`uv run pyright` エラー0件、`--verifytypes` 100%。
+
+## 受信順序と電文の時刻範囲（2026-11-12）
+
+`ordering-plan.md` に従って実装した。
+
+- VPWS50の「発表なし」を、市町村別の `cleared` と全国の `cleared_all` に時刻つきで保持する。
+  セルがない組み合わせでも過去のVPWWによる警報の復活を防ぐ。既存セルがある場合はその時刻を優先し、
+  同時刻・新しい内容は従来どおり適用する。更新は準備後にまとめて反映する。
+- JSONはversion 1のまま2項目を追加した。項目がない既存JSONの読み込み、型とタイムゾーンの検査、
+  JSON往復による時刻の保持を検証した。
+- `WarningState.apply()` と `State.apply()` に `now` / `max_age` / `max_future` を追加した。
+  `now` を渡すとControl/DateTimeを既定で過去24時間・未来10分の範囲に制限する。
+  境界は受理し、範囲外は `too_old` / `future` として処理履歴へ記録せずスキップする。
+  `now` 省略時の動作、基準の変更・無効化、引数検証、既存スキップ理由の優先順位も検証した。
+- 実行例はオンライン時だけ現在時刻を渡し、オフラインサンプルでは時刻判定をしない。
+  READMEの最初の例と非同期の例は着手時の内容を維持した。
+  実行例とのAST比較テストは、追加した `now` の受け渡しを除いた処理本体を比較する形に更新し、
+  オンライン・オフラインでの引数と、時刻でスキップした電文のackを別途検証した。
+- g06dを追加した。既存12ケースのcase.json・XMLにはgit差分がない。
+  フィード側の既存未コミット変更は保持し、今回その実装・素材には変更を加えていない。
+
+### 順序入れ替えと性能
+
+- 新規の `tests/test_state_order.py` は、共有8電文を一度だけ解析し、固定シードの30通りと
+  「VPWS50 → 稚内VPWW55 2通」の再現順序を確認する。
+  修正前は稚内に古い警報が残るアサーションで失敗（1件失敗、1.25秒）、
+  修正後は市町村の警報名集合・河川状態が時系列順の結果と一致（1件成功、1.54秒）した。
+- `uv run --offline python benchmarks/benchmark_vpws50.py --repeat 7` を修正前後で実行した。
+  Windows 11 / Python 3.13.7、1,805市町村・12,635セル・VPWS50の1,805 Item。
+  中央値は **0.077410秒 → 0.088104秒（約1.14倍、約13.8%増）** で、2倍未満。
+  Change件数は両方とも12,582件。保存JSONには時刻記録が加わるためチェックサムは変わる。
+
+### 完了条件の検証
+
+- `uv run --offline pytest`：**1,022件成功（46.49秒）**。skip / xfailなし。goldenは13ケース。
+- `uv run --offline ruff check` / `uv run --offline ruff format --check`：成功（61ファイル）。
+- `uv run --offline pyright`：エラー0件・警告0件。
+- `uv run --offline pyright --verifytypes pyjmaxml --ignoreexternal`：**100%**。
+- `uv run --offline python examples/poll_warnings.py --offline-sample tests/data/samples/15_16_03_241226_VPWW55.xml --city 0121400`：
+  レベル４大雨危険警報、録画サンプルの注意、出典と加工主体を表示して成功。
+- `git diff --check` 成功。変更した `pyjmaxml/state/*.py` はLF改行。
+
+実行環境の制約により、`UV_CACHE_DIR` は作業ディレクトリの `tmp/uv-cache` に設定した。
+最初の全体テストは既定の一時ディレクトリへのアクセス拒否で1,013件成功・9件setup errorになったため、
+`PYTEST_DEBUG_TEMPROOT` を作業ディレクトリの `tmp` に設定して全体を再実行した。
+pyrightもNode.jsのパス解決がサンドボックス内で拒否されたため、同じコマンドをサンドボックス外で実行した。
+仕様上の計画変更はない。
+
+今回変更・追加したファイル：
+
+- `pyjmaxml/state/base.py`
+- `pyjmaxml/state/warning.py`
+- `examples/poll_warnings.py`
+- `tests/test_warning_state.py`
+- `tests/test_state_order.py`（新規）
+- `tests/test_golden.py`
+- `tests/test_readme_example.py`
+- `tests/golden/g06d_vpws50_then_old_vpww/case.json`（新規）
+- `tests/golden/README.md`
+- `README.md`
+- `CHANGELOG.md`
+- `IMPLEMENTATION_STATUS.md`
+
+実電文のオンライン取得、全順列の網羅、Python 3.11・3.12、リモートCIは今回検証していない。
+git commit・push・公開操作は行っていない。

@@ -248,6 +248,8 @@ def test_snapshot_and_city_lookup_do_not_scan_all_cells_after_restore(monkeypatc
         "accept_status",
         "last_updated",
         "cells",
+        "cleared",
+        "cleared_all",
         "rivers",
         "seen",
         "latest",
@@ -387,6 +389,215 @@ def test_unresolvable_snapshot_does_not_mutate_state_or_consume_telegram_key():
     assert state.to_json() == before
     corrected = weather("VPWS50", cities={A: [kind("03", RAIN_LOW[1], time=10)]}, sent=10)
     assert state.apply(corrected).applied
+
+
+@pytest.mark.parametrize("global_clear", [False, True])
+def test_snapshot_absence_watermark_blocks_old_missing_cells_after_roundtrip(global_clear):
+    state = WarningState()
+    snapshot = weather(
+        "VPWS50",
+        cities=None if global_clear else {B: [NONE], A: [NONE]},
+        extra_kinds=[kind("14", THUNDER[1], time=10)],
+        issued=10,
+        sent=10,
+    )
+    assert state.apply(snapshot).applied
+    saved = state.to_json()
+    payload = json.loads(saved)
+    assert payload["cells"] == []
+    assert payload["cleared"] == (
+        [] if global_clear else [{"city": city, "at": at(10).isoformat()} for city in (A, B)]
+    )
+    assert payload["cleared_all"] == (at(10).isoformat() if global_clear else None)
+    assert state.cities() == {} and state.rivers() == {}
+    state = WarningState.from_json(saved)
+    assert state.to_json() == saved
+    old = weather(cities={A: [RAIN]}, issued=9, sent=20)
+    result = state.apply(old)
+    assert result.applied and result.changes == ()
+    assert state.by_city(A) == frozenset()
+    for minute in (10, 11):
+        state = WarningState.from_json(saved)
+        result = state.apply(weather(cities={A: [RAIN]}, issued=minute, sent=20 + minute))
+        assert result.applied
+        assert names(state.by_city(A)) == {RAIN[1]}
+
+
+@pytest.mark.parametrize("global_clear", [False, True])
+def test_snapshot_absence_watermarks_never_move_backwards(global_clear):
+    state = WarningState()
+    for minute, sent in [(20, 20), (10, 30)]:
+        state.apply(
+            weather(
+                "VPWS50",
+                cities=None if global_clear else {A: [NONE]},
+                extra_kinds=[kind("14", THUNDER[1], time=minute)],
+                issued=minute,
+                sent=sent,
+            )
+        )
+    result = state.apply(weather(cities={A: [RAIN]}, issued=15, sent=40))
+    assert result.applied and result.changes == ()
+    assert state.cities() == {}
+
+
+def test_existing_cell_precedes_absence_watermark_and_other_cities_are_untouched():
+    state = WarningState()
+    state.apply(weather("VPWS50", cities={A: [kind("43", RAIN[1], time=5)]}, sent=10))
+    state.apply(
+        weather(
+            "VPWS50",
+            cities={A: [kind("43", RAIN[1], time=5)]},
+            extra_kinds=[kind("14", THUNDER[1], time=20)],
+            sent=20,
+        )
+    )
+    state = WarningState.from_json(state.to_json())
+    state.apply(weather(cities={A: [RAIN_LOW], B: [RAIN]}, issued=10, sent=30))
+    assert names(state.by_city(A)) == {RAIN_LOW[1]}
+    assert names(state.by_city(B)) == {RAIN[1]}
+
+
+def test_snapshot_active_kind_uses_absence_watermark_for_missing_cell():
+    state = WarningState()
+    state.apply(weather("VPWS50", issued=20, sent=20))
+    result = state.apply(weather("VPWS50", cities={A: [kind("43", RAIN[1], time=10)]}, sent=30))
+    assert result.applied and result.changes == ()
+    assert state.cities() == {}
+
+
+def test_invalid_later_snapshot_item_does_not_commit_absence_watermarks():
+    state = WarningState()
+    state.apply(weather("VPWS50", issued=5, sent=5))
+    before = state.to_json()
+    bad = weather(
+        "VPWS50",
+        cities={A: [NONE], B: [RAIN]},
+        sent=10,
+        extra_kinds=[kind("14", THUNDER[1], time=10)],
+    )
+    with pytest.raises(ValueError, match="DateTime"):
+        state.apply(bad)
+    assert state.to_json() == before
+    corrected = weather("VPWS50", cities={A: [NONE], B: [kind("43", RAIN[1], time=10)]}, sent=10)
+    assert state.apply(corrected).applied
+
+
+@pytest.mark.parametrize("missing", [("cleared",), ("cleared_all",), ("cleared", "cleared_all")])
+def test_older_json_without_absence_watermarks_is_readable(missing):
+    state = WarningState()
+    report = weather(cities={A: [RAIN]})
+    state.apply(report)
+    payload = json.loads(state.to_json())
+    for field in missing:
+        del payload[field]
+    restored = WarningState.from_json(json.dumps(payload))
+    assert restored.to_json() == state.to_json()
+    assert restored.apply(report).skip_reason == SkipReason.DUPLICATE
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("cleared", None),
+        ("cleared", {}),
+        ("cleared", [None]),
+        ("cleared", [{}]),
+        ("cleared", [{"city": 123, "at": at(0).isoformat()}]),
+        ("cleared", [{"city": A, "at": 123}]),
+        ("cleared", [{"city": A, "at": "invalid"}]),
+        ("cleared", [{"city": A, "at": "2026-11-12T00:00:00"}]),
+        ("cleared_all", []),
+        ("cleared_all", 123),
+        ("cleared_all", "invalid"),
+        ("cleared_all", "2026-11-12T00:00:00"),
+    ],
+)
+def test_invalid_absence_watermark_json_is_rejected(field, value):
+    payload = json.loads(WarningState().to_json())
+    payload[field] = value
+    with pytest.raises(ValueError):
+        WarningState.from_json(json.dumps(payload))
+
+
+def test_age_filter_is_opt_in():
+    assert WarningState().apply(weather(cities={A: [RAIN]}, sent=-1_000_000)).applied
+
+
+@pytest.mark.parametrize(
+    ("offset", "reason"),
+    [
+        (-timedelta(hours=24), None),
+        (-timedelta(hours=24, seconds=1), SkipReason.TOO_OLD),
+        (timedelta(minutes=10), None),
+        (timedelta(minutes=10, seconds=1), SkipReason.FUTURE),
+    ],
+)
+def test_control_time_bounds_are_inclusive(offset, reason):
+    # ReportDateTime intentionally differs: filtering must use Control/DateTime.
+    report = weather(cities={A: [RAIN]}, issued=-1_000_000)
+    report = replace(report, control=replace(report.control, date_time=NOW + offset))
+    state = WarningState()
+    before = state.to_json()
+    result = state.apply(report, now=NOW)
+    assert result.skip_reason == reason and result.applied == (reason is None)
+    if reason is not None:
+        assert result.changes == () and state.to_json() == before
+        assert state.apply(report).applied
+
+
+@pytest.mark.parametrize(
+    ("sent", "bounds"),
+    [(-1_000_000, {"max_age": None}), (1_000_000, {"max_future": None})],
+)
+def test_time_bound_can_be_disabled(sent, bounds):
+    assert WarningState().apply(weather(sent=sent), now=NOW, **bounds).applied
+
+
+@pytest.mark.parametrize(
+    ("sent", "bounds", "reason"),
+    [
+        (-61, {"max_age": timedelta(hours=1)}, SkipReason.TOO_OLD),
+        (-60, {"max_age": timedelta(hours=1)}, None),
+        (21, {"max_future": timedelta(minutes=20)}, SkipReason.FUTURE),
+        (20, {"max_future": timedelta(minutes=20)}, None),
+        (0, {"max_age": timedelta(0), "max_future": timedelta(0)}, None),
+    ],
+)
+def test_custom_time_bounds(sent, bounds, reason):
+    result = WarningState().apply(weather(sent=sent), now=NOW, **bounds)
+    assert result.skip_reason == reason
+
+
+@pytest.mark.parametrize(
+    "bounds",
+    [
+        {"now": NOW.replace(tzinfo=None)},
+        {"now": NOW, "max_age": -timedelta(seconds=1)},
+        {"now": NOW, "max_future": -timedelta(seconds=1)},
+        {"max_age": -timedelta(seconds=1)},
+        {"max_future": -timedelta(seconds=1)},
+    ],
+)
+def test_invalid_time_filter_arguments_do_not_mutate_state(bounds):
+    state = WarningState()
+    before = state.to_json()
+    with pytest.raises(ValueError):
+        state.apply(weather(), **bounds)
+    assert state.to_json() == before
+
+
+def test_ledger_skip_precedence_over_time_filters():
+    state = WarningState()
+    first = weather(cities={A: [RAIN]}, sent=10)
+    state.apply(first)
+    later_now = at(10) + timedelta(days=7)
+    assert state.apply(first, now=later_now).skip_reason == SkipReason.DUPLICATE
+    assert state.apply(weather(sent=9), now=later_now).skip_reason == SkipReason.STALE
+    unsupported = replace(first, control=replace(first.control, title="unsupported"))
+    assert state.apply(unsupported, now=later_now).skip_reason == SkipReason.UNSUPPORTED
+    training = replace(unsupported, control=replace(unsupported.control, status="訓練"))
+    assert state.apply(training, now=later_now).skip_reason == SkipReason.STATUS
 
 
 @pytest.mark.parametrize("value", ["[]", "null", "{}", '{"version":2}', '{"version":true}'])

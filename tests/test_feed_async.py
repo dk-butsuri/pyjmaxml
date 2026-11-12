@@ -73,7 +73,7 @@ def test_minimum_interval_is_enforced():
 def test_fetch_does_not_ack_and_failures_are_returned_again():
     http = FakeAsyncHttpClient(
         [
-            HttpResponse(200, {}, feed("a", "b")),
+            HttpResponse(200, {}, feed("b", "a")),
             FeedTransportError("no response"),
             HttpResponse(200, {}, b"<Report/>"),
             HttpResponse(304, {}, b""),

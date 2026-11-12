@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, fields, is_dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from types import MappingProxyType
 from typing import Literal, Self, cast
 
@@ -14,7 +14,7 @@ from ..codes import AREA_CITY_PARENT
 from ..kinds import data_type_code
 from ..normalize import Predicate, WarningKind, classify_flood, classify_mete, rank
 from ..parse import MeteBody, Report
-from .base import ApplyResult, Change, ChangeType
+from .base import ApplyResult, Change, ChangeType, SkipReason
 from .base import Ledger as _Ledger
 
 _MUNICIPAL = "気象警報・注意報（市町村等）"
@@ -109,28 +109,53 @@ class WarningState:
         self._cells: dict[tuple[str, str], Cell] = {}
         # Derived in-memory index; the version 1 JSON representation stays flat.
         self._cells_by_city: dict[str, dict[str, Cell]] = {}
+        self._cleared: dict[str, datetime] = {}
+        self._cleared_all: datetime | None = None
         self._rivers: dict[str, River] = {}
 
     @property
     def last_updated(self) -> datetime | None:
         return self._ledger.last_updated
 
-    def apply(self, report: Report) -> ApplyResult:
-        """Apply one report, with skip precedence and separate cell watermarks."""
+    def apply(
+        self,
+        report: Report,
+        *,
+        now: datetime | None = None,
+        max_age: timedelta | None = timedelta(hours=24),
+        max_future: timedelta | None = timedelta(minutes=10),
+    ) -> ApplyResult:
+        """Apply a report; optionally bound Control/DateTime against an aware now.
+
+        Without now, no age or future filtering is performed. Bounds are inclusive;
+        None disables that side. Time-rejected reports are not added to the ledger.
+        """
+        if now is not None:
+            _aware(now)
+        for bound in (max_age, max_future):
+            if bound is not None and bound < timedelta(0):
+                raise ValueError("Time bounds must be nonnegative")
         group = data_type_code(report)
         reason = self._ledger.skip_reason(report, group, _SUPPORTED)
         if reason is not None:
             return ApplyResult(False, reason, ())
         assert group is not None
         _aware(report.control.date_time)
+        if now is not None:
+            if max_age is not None and report.control.date_time < now - max_age:
+                return ApplyResult(False, SkipReason.TOO_OLD, ())
+            if max_future is not None and report.control.date_time > now + max_future:
+                return ApplyResult(False, SkipReason.FUTURE, ())
         _aware(report.head.report_date_time)
         # Prepare updates before mutating the state or committing the ledger.
         cell_updates: dict[tuple[str, str], Cell] = {}
+        cleared_updates: dict[str, datetime] = {}
+        cleared_all: datetime | None = None
         river_updates: dict[str, River | None] = {}
         if group in _RIVER_INFO:
             river_updates[report.head.event_id] = self._river_update(report, group)
         else:
-            cell_updates = self._weather_updates(report, group)
+            cell_updates, cleared_updates, cleared_all = self._weather_updates(report, group)
         changes: list[Change] = []
         for (city, cell_group), cell in cell_updates.items():
             previous = self._cells.get((city, cell_group))
@@ -158,6 +183,9 @@ class WarningState:
                 changes.append(change)
         for key, cell in cell_updates.items():
             self._set_cell(key, cell)
+        self._cleared.update(cleared_updates)
+        if cleared_all is not None:
+            self._cleared_all = cleared_all
         for event_id, river in river_updates.items():
             if river is None:
                 self._rivers.pop(event_id, None)
@@ -172,7 +200,16 @@ class WarningState:
         city, group = key
         self._cells_by_city.setdefault(city, {})[group] = cell
 
-    def _weather_updates(self, report: Report, group: str) -> dict[tuple[str, str], Cell]:
+    def _previous(self, key: tuple[str, str]) -> Cell | None:
+        cell = self._cells.get(key)
+        if cell is not None:
+            return cell
+        times = [t for t in (self._cleared.get(key[0]), self._cleared_all) if t is not None]
+        return Cell(frozenset(), max(times)) if times else None
+
+    def _weather_updates(
+        self, report: Report, group: str
+    ) -> tuple[dict[tuple[str, str], Cell], dict[str, datetime], datetime | None]:
         if not isinstance(report.body, MeteBody):
             raise ValueError("Weather reports require a meteorological Body")
         warnings = [warning for warning in report.body.warning if warning.type_value == _MUNICIPAL]
@@ -184,17 +221,18 @@ class WarningState:
                 if item.area is None or item.area.code is None:
                     raise ValueError("Municipal warning Item must have an Area/Code")
                 key = (item.area.code, group)
-                previous = self._cells.get(key)
+                previous = self._previous(key)
                 if previous is None or at >= previous.as_of:
                     updates[key] = Cell(
                         frozenset(_mete_kind(k) for k in item.kind if _active(k)), at
                     )
-            return updates
+            return updates, {}, None
         if not warnings:
             at = report.head.report_date_time
-            return {
+            updates = {
                 key: Cell(frozenset(), at) for key, cell in self._cells.items() if cell.as_of <= at
             }
+            return updates, {}, max(self._cleared_all, at) if self._cleared_all else at
         # W is global across all Kind/DateTime entries in this report.
         dates = [
             _aware(kind.date_time.value.to_datetime())
@@ -206,14 +244,18 @@ class WarningState:
         if not dates:
             raise ValueError("VPWS50 municipal warnings have no Kind/DateTime watermark")
         watermark = max(dates)
+        cleared: dict[str, datetime] = {}
         for item in items:
-            updates.update(self._snapshot_item(item, watermark))
-        return updates
+            updates.update(self._snapshot_item(item, watermark, cleared))
+        return updates, cleared, None
 
-    def _snapshot_item(self, item: TypeItem1, watermark: datetime) -> dict[tuple[str, str], Cell]:
+    def _snapshot_item(
+        self, item: TypeItem1, watermark: datetime, cleared: dict[str, datetime]
+    ) -> dict[tuple[str, str], Cell]:
         if item.area is None or item.area.code is None:
             raise ValueError("Municipal warning Item must have an Area/Code")
         city = item.area.code
+        cleared[city] = max(self._cleared.get(city, watermark), watermark)
         kinds: dict[str, set[WarningKind]] = {}
         dates: dict[str, datetime] = {}
         for raw_kind in item.kind:
@@ -228,7 +270,7 @@ class WarningState:
         updates: dict[tuple[str, str], Cell] = {}
         for group, active in kinds.items():
             key = (city, group)
-            previous = self._cells.get(key)
+            previous = self._previous(key)
             if previous is None or dates[group] >= previous.as_of:
                 updates[key] = Cell(frozenset(active), dates[group])
         for group, cell in self._cells_by_city.get(city, {}).items():
@@ -291,11 +333,18 @@ class WarningState:
         return MappingProxyType(dict(sorted(self._rivers.items())))
 
     def to_json(self) -> str:
-        """Serialize cells, rivers, accepted statuses, and processing history as version 1."""
+        """Serialize cells, rivers, statuses, and history as version 1.
+
+        cleared / cleared_all retain VPWS50 absence watermarks for missing cells.
+        """
         payload = {
             "version": 1,
             "accept_status": sorted(self._ledger.accept_status),
             "last_updated": self.last_updated.isoformat() if self.last_updated else None,
+            "cleared": [
+                {"city": city, "at": at.isoformat()} for city, at in sorted(self._cleared.items())
+            ],
+            "cleared_all": self._cleared_all.isoformat() if self._cleared_all else None,
             "cells": [
                 {
                     "city": city,
@@ -325,7 +374,10 @@ class WarningState:
 
     @classmethod
     def from_json(cls, s: str) -> Self:
-        """Restore version 1; warning metadata is reclassified from name/code/group."""
+        """Restore version 1, including older data without cleared / cleared_all.
+
+        Warning metadata is reclassified from name/code/group.
+        """
         value: object = json.loads(s)
         data = _object(value)
         if type(data.get("version")) is not int or data["version"] != 1:
@@ -334,6 +386,11 @@ class WarningState:
             state = cls(accept_status=[_string(v) for v in _array(data["accept_status"])])
             last = data["last_updated"]
             state._ledger.last_updated = None if last is None else _time(last)
+            for value in _array(data.get("cleared", [])):
+                record = _object(value)
+                state._cleared[_string(record["city"])] = _time(record["at"])
+            cleared_all = data.get("cleared_all")
+            state._cleared_all = None if cleared_all is None else _time(cleared_all)
             for value in _array(data["cells"]):
                 record = _object(value)
                 key = (_string(record["city"]), _string(record["group"]))

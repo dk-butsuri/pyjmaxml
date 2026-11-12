@@ -237,25 +237,31 @@ class FeedPoller:
         if resp.status == 304:
             self._etag = _header(resp.headers, "ETag") or self._etag
             self._last_modified = _header(resp.headers, "Last-Modified") or self._last_modified
-            return list(self._pending.values())
+            return self._pending_entries()
         if resp.status != 200:
             raise HttpStatusError(resp.status)
         # Parse the entire response before committing IDs or cache validators.
         entries = _parse_entries(resp.body)
-        batch_ids: set[str] = set()
+        batch: dict[str, Entry] = {}
         for entry in entries:
-            if entry.id in batch_ids:
-                continue
-            batch_ids.add(entry.id)
+            batch.setdefault(entry.id, entry)
+        # JMA lists entries newest first. Queue them oldest first so that state
+        # updates see every transition; ties keep the feed's relative age.
+        for entry in sorted(reversed(batch.values()), key=lambda e: e.updated):
             if entry.id not in self._pending and entry.id not in self._seen:
                 self._pending[entry.id] = entry
                 if len(self._pending) > 1000:
-                    dropped_id, _ = self._pending.popitem(last=False)
+                    dropped_id = self._pending_entries()[0].id
+                    del self._pending[dropped_id]
                     _LOGGER.warning("Pending entry limit (1000) exceeded; dropped %s", dropped_id)
         # A new representation without a validator invalidates its old value.
         self._etag = _header(resp.headers, "ETag")
         self._last_modified = _header(resp.headers, "Last-Modified")
-        return list(self._pending.values())
+        return self._pending_entries()
+
+    def _pending_entries(self) -> list[Entry]:
+        # A later response may still reveal an older entry; the sort is stable.
+        return sorted(self._pending.values(), key=lambda entry: entry.updated)
 
     def ack(self, entry: Entry | str) -> None:
         """Record processing success, even if the ID is not currently pending.

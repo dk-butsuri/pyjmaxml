@@ -23,7 +23,7 @@ _build_fixtures.py       書き換えた電文を作ったスクリプト（記�
       "roundtrip_before": true,       // 省略時は false。true なら、apply の前に state = WarningState.from_json(state.to_json()) を行う
       "expect": {
         "applied": true,              // ApplyResult.applied
-        "skip_reason": null,          // applied=false のときの理由："status" | "unsupported" | "duplicate" | "stale"
+        "skip_reason": null,          // applied=false のときの理由："status" | "unsupported" | "duplicate" | "stale" | "too_old" | "future"
         "cities": {                   // state.by_city(code) を Kind 名の集合にしたもの。完全一致で比べる（[] は「何も発表されていない」）
           "0121400": ["レベル４大雨危険警報"]
         },

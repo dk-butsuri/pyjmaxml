@@ -75,6 +75,7 @@ print("枚方市", sorted(kind.name for kind in state.by_city("2721000")))
 ackしないと同じ電文が次の `poll()` でも返り続けるためです。
 この例は解析不能な電文もログに残してackします。取得失敗時はackせず、次回に再取得します。
 `apply()` が対象外・訓練・重複・古い電文としてスキップした場合もackします。
+時刻の範囲外としてスキップした `too_old` / `future` も同様です。
 同梱の通信アダプター（urllib・httpx）は、接続・タイムアウト・本文の読み込み途中の切断を
 `FeedTransportError`（`FeedError` の一種）に変換し、元の例外を `__cause__` に残します。
 このため `except FeedError` だけで、通信ライブラリによらず取得失敗を扱えます。
@@ -93,7 +94,11 @@ python examples/poll_warnings.py --offline-sample tests/data/samples/15_16_03_24
 
 - `poll()` は未処理エントリーを返します。`fetch()` 自体はackしません。
   未ackの電文は304応答でも、フィードから消えた後でも返ります。
-- 未処理は発見順に最大1,000件保持し、超過時は古いものを警告ログ付きで破棄します。
+- `poll()` は未処理を `updated` の古い順に返します。気象庁のフィードは新しい順ですが、並べ替えて返します。
+  時刻が同じものはフィード上で後ろにある方を先にします。この順のまま `apply()` してください。
+  新しい電文を先に適用すると、同じ情報の古い電文は `stale` として捨てられます。
+  最終的な状態は同じですが、途中の発表・切り替えの `Change` は出ません。
+- 未処理は最大1,000件保持し、超過時は `updated` の最も古いものを警告ログ付きで破棄します。
   処理済みIDは既定で最大10,000件です。未処理は永続化しません。
 - 高頻度フィードの最小間隔は60秒、`long=True` の長期フィードは3600秒です。
   呼び出し側で次回実行をスケジュールしてください。自動待機や自動再試行は行いません。
@@ -101,6 +106,25 @@ python examples/poll_warnings.py --offline-sample tests/data/samples/15_16_03_24
   状態は受け取った電文の範囲だけです。開始時・再起動時は長期フィードも使い、両方を同じ状態に適用してください。
   空の結果だけで「警報なし」と判断することはできません。
 - User-Agentの既定値は `pyjmaxml/<version>` です。`user_agent` で上書きでき、空文字は指定できません。
+
+実運用では現在時刻を渡すと、気象庁の運用指針 §2.1.3.6 に沿って、
+`Control/DateTime` が古すぎる電文を `too_old`、未来すぎる電文を `future` としてスキップできます。
+`now` はタイムゾーン必須です。省略すると時刻の範囲による判定はしません。
+
+```python
+from datetime import UTC, datetime, timedelta
+
+result = state.apply(report, now=datetime.now(UTC))  # 既定：過去24時間、未来10分まで
+result = state.apply(report, now=datetime.now(UTC), max_age=timedelta(hours=48), max_future=None)
+```
+
+`max_age` の既定値は24時間です。再起動時に読む長期フィードには数日前の電文も含まれますが、
+発表中の古い要素は約10分ごとのVPWS50に `Kind/DateTime` つきで載るため、
+24時間より古いVPWWを捨てても状態を回復でき、保存済みの古い電文の混入を防げます。
+`max_future` の既定値は10分で、利用者側の時計の多少のずれを許容します。
+両方とも非負の `timedelta` で変更でき、`None` でその側の判定を無効化できます。境界時刻は受理します。
+スキップの優先順位は status → unsupported → duplicate → stale → too_old → future です。
+`too_old` / `future` は処理履歴に記録しないため、後で `now` なしで適用し直せます。
 
 `WarningState` はVPWW55〜61・VPWS50・VXKO・VXSUを扱い、既定では `Control/Status="通常"` のみを受理します。
 旧形式のVPWW53/54と時系列のVPWP50は対象外です。`by_city(code)` は発表中の `WarningKind` 集合、
@@ -118,6 +142,8 @@ assert restored.by_city("2721000") == state.by_city("2721000")
 ```
 
 JSON形式はversion 1です。状態と電文の重複除去記録を保存します。フィードの未処理記録は含みません。
+VPWS50の「発表なし」は `cleared`（市町村別）と `cleared_all`（全国）に時刻つきで保存し、
+セルがまだない市町村でも古い電文で警報が復活するのを防ぎます。この2項目がない従来のJSONも読めます。
 分割された市町村等のコードには、氾濫の照会時だけコード表の親市町村との対応を適用します。
 親コードの照会へ子の気象警報を集約しません。
 
@@ -136,7 +162,7 @@ from pyjmaxml.feed import AsyncFeedClient, FeedError, FeedKind
 
 async def update_once(client: AsyncFeedClient, state: WarningState) -> None:
     entries = await client.poll()
-    # 取得だけを並行に行い、状態への適用は元の順に1件ずつ行う。
+    # 取得だけを並行に行い、状態への適用は poll() の順（古い順）に1件ずつ行う。
     results = await asyncio.gather(
         *(client.fetch(entry) for entry in entries), return_exceptions=True
     )

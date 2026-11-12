@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections import OrderedDict
 from collections.abc import Collection, Iterable
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import StrEnum
 from typing import Literal, Protocol, Self, TypeAlias
 
@@ -20,6 +20,9 @@ class SkipReason(StrEnum):
     UNSUPPORTED = "unsupported"
     DUPLICATE = "duplicate"
     STALE = "stale"
+    # Optional time bounds recommended by the JMA operation guide §2.1.3.6.
+    TOO_OLD = "too_old"
+    FUTURE = "future"
 
 
 class ChangeType(StrEnum):
@@ -51,7 +54,14 @@ class ApplyResult:
 class State(Protocol):
     """An I/O-free state machine that can persist its processing history."""
 
-    def apply(self, report: Report) -> ApplyResult: ...
+    def apply(
+        self,
+        report: Report,
+        *,
+        now: datetime | None = None,
+        max_age: timedelta | None = timedelta(hours=24),
+        max_future: timedelta | None = timedelta(minutes=10),
+    ) -> ApplyResult: ...
 
     def to_json(self) -> str: ...
 

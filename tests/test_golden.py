@@ -6,7 +6,7 @@ import pytest
 from pyjmaxml import WarningState, parse
 
 CASES = sorted((Path(__file__).parent / "golden").glob("*/case.json"))
-assert len(CASES) == 12, "The pinned golden corpus must contain all 12 cases"
+assert len(CASES) == 13, "The pinned golden corpus must contain all 13 cases"
 
 
 @pytest.mark.parametrize("case_path", CASES, ids=lambda path: path.parent.name)

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+from datetime import UTC, datetime
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
@@ -13,7 +14,7 @@ from pyjmaxml.feed import FeedClient, FeedError, FeedKind, HttpRequest, HttpResp
 logger = logging.getLogger(__name__)
 
 
-def update_once(client: FeedClient, state: WarningState) -> None:
+def update_once(client: FeedClient, state: WarningState, *, now: datetime | None = None) -> None:
     for entry in client.poll():
         try:
             data = client.fetch(entry)
@@ -27,7 +28,7 @@ def update_once(client: FeedClient, state: WarningState) -> None:
             client.ack(entry)
             continue
         try:
-            state.apply(report)
+            state.apply(report, now=now)
         except ValueError:
             logger.exception("状態に適用できない電文をackして除外: %s", entry.id)
         client.ack(entry)
@@ -66,7 +67,7 @@ def main() -> None:
     http = LocalSampleHttp(args.offline_sample) if args.offline_sample else None
     client = FeedClient(FeedKind.EXTRA, http=http, user_agent="warning-example/0.1.0")
     state = WarningState()
-    update_once(client, state)
+    update_once(client, state, now=None if args.offline_sample else datetime.now(UTC))
     source = "https://xml.kishou.go.jp/xmlpull.html"
     if args.offline_sample:
         print("録画済みサンプルの再生です。現在の発表状況ではありません。")

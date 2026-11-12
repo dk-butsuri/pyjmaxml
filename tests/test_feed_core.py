@@ -26,7 +26,10 @@ def test_recorded_feed_entries(kind, count):
     entries = FeedPoller(kind).handle_response(response, NOW)
     assert len(entries) == count
     root = ET.fromstring(response.body)
-    for entry, xml in zip(entries, root.findall(ATOM + "entry"), strict=True):
+    # The recording lists entries newest first; poll results are oldest first.
+    xml_entries = list(reversed(root.findall(ATOM + "entry")))
+    assert [entry.updated for entry in entries] == sorted(entry.updated for entry in entries)
+    for entry, xml in zip(entries, xml_entries, strict=True):
         assert entry.id == xml.findtext(ATOM + "id")
         assert entry.title == xml.findtext(ATOM + "title")
         assert entry.author == xml.findtext(ATOM + "author/" + ATOM + "name")
@@ -164,7 +167,7 @@ def test_success_without_validators_clears_old_values():
 def test_duplicate_ids_within_and_across_responses_and_injected_empty_store():
     seen: set[str] = set()
     poller = FeedPoller(FeedKind.EXTRA, seen=seen)
-    response = HttpResponse(200, {}, feed("a", "a", "b", "a"))
+    response = HttpResponse(200, {}, feed("b", "a", "b", "b"))
     assert [entry.id for entry in poller.handle_response(response, NOW)] == ["a", "b"]
     assert seen == set()
     assert [entry.id for entry in poller.handle_response(response, NOW)] == ["a", "b"]
@@ -191,7 +194,7 @@ def test_default_acknowledged_store_is_bounded_lru():
 def test_unacknowledged_entries_are_repeated_until_ack(status):
     seen: set[str] = set()
     poller = FeedPoller(FeedKind.EXTRA, seen=seen)
-    response = HttpResponse(200, {}, feed("a", "b"))
+    response = HttpResponse(200, {}, feed("b", "a"))
     entries = poller.handle_response(response, NOW)
     next_response = response if status == 200 else HttpResponse(304, {}, b"")
     assert poller.handle_response(next_response, NOW) == entries
@@ -206,7 +209,7 @@ def test_unacknowledged_entries_are_repeated_until_ack(status):
 
 def test_pending_survives_removal_from_feed_and_keeps_discovery_order():
     poller = FeedPoller(FeedKind.EXTRA)
-    first = poller.handle_response(HttpResponse(200, {}, feed("b", "a")), NOW)
+    first = poller.handle_response(HttpResponse(200, {}, feed("a", "b")), NOW)
     second = poller.handle_response(HttpResponse(200, {}, feed("c", "a", "c")), NOW)
     assert [entry.id for entry in second] == ["b", "a", "c"]
     assert second[:2] == first
@@ -233,7 +236,9 @@ def test_pending_limit_drops_oldest_without_ack_and_logs_warning(caplog):
     poller = FeedPoller(FeedKind.EXTRA, seen=seen)
     ids = [str(number) for number in range(1002)]
     with caplog.at_level("WARNING", logger="pyjmaxml.feed._core"):
-        result = poller.handle_response(HttpResponse(200, {}, feed(*ids, "0")), NOW)
+        # Newest first, as JMA lists them: "0" is the oldest entry.
+        newest_first = feed(*reversed(ids), "1001")
+        result = poller.handle_response(HttpResponse(200, {}, newest_first), NOW)
     assert [entry.id for entry in result] == ids[2:]
     assert len(caplog.records) == 2
     assert all(record.levelname == "WARNING" for record in caplog.records)
@@ -241,6 +246,35 @@ def test_pending_limit_drops_oldest_without_ack_and_logs_warning(caplog):
     assert "dropped 1" in caplog.records[1].message
     assert seen == set()
     assert poller.handle_response(HttpResponse(304, {}, b""), NOW) == result
+
+
+def test_entries_are_returned_oldest_first_across_responses():
+    poller = FeedPoller(FeedKind.EXTRA)
+    times = {
+        "late": "2026-11-12T00:03:00+09:00",
+        "middle": "2026-11-12T00:02:00+09:00",
+        "early": "2026-11-12T00:01:00+09:00",
+        "earliest": "2026-11-12T00:00:00+09:00",
+    }
+    first = poller.handle_response(HttpResponse(200, {}, feed("late", "early", updated=times)), NOW)
+    assert [entry.id for entry in first] == ["early", "late"]
+    # A later response can still reveal an entry older than pending ones.
+    response = HttpResponse(200, {}, feed("late", "middle", "earliest", updated=times))
+    second = poller.handle_response(response, NOW)
+    assert [entry.id for entry in second] == ["earliest", "early", "middle", "late"]
+    assert poller.handle_response(HttpResponse(304, {}, b""), NOW) == second
+
+
+def test_pending_limit_drops_the_oldest_timestamp_not_the_first_discovered():
+    poller = FeedPoller(FeedKind.EXTRA)
+    ids = [str(number) for number in range(999)]
+    poller.handle_response(HttpResponse(200, {}, feed(*ids)), NOW)
+    times = {"older": "2026-11-11T00:00:00+09:00", "newer": "2026-11-13T00:00:00+09:00"}
+    poller.handle_response(HttpResponse(200, {}, feed("older", updated=times)), NOW)
+    result = poller.handle_response(HttpResponse(200, {}, feed("newer", updated=times)), NOW)
+    assert len(result) == 1000
+    assert "older" not in {entry.id for entry in result}
+    assert result[-1].id == "newer"
 
 
 def test_ack_unknown_and_repeated_ids_and_restarting_only_preserves_seen():
