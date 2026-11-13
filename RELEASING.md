@@ -52,5 +52,3 @@ python examples/poll_warnings.py --offline-sample tests/data/samples/15_16_03_24
 3. 人間が宛先と配布物を確認して実行する。新規venvで `pip install pyjmaxml==0.1.0` と
    オフラインの使用例を確認する。
 4. 実際の公開後にREADMEのインストール手順とCHANGELOGの公開日を更新する。
-
-このリポジトリで実施したローカル検証の結果は `IMPLEMENTATION_STATUS.md` を参照。

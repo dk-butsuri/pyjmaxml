@@ -21,7 +21,10 @@ from pyjmaxml.feed import (
 
 ROOT = Path(__file__).parents[1]
 SAMPLE = ROOT / "tests/data/samples/15_16_03_241226_VPWW55.xml"
-README = (ROOT / "README.md").read_text(encoding="utf-8")
+# The guide holds the detailed examples moved out of the README.
+README = "\n".join(
+    (ROOT / name).read_text(encoding="utf-8") for name in ("README.md", "docs/guide.md")
+)
 BLOCK = next(
     block.split("```", 1)[0]
     for block in README.split("```python\n")[1:]

@@ -271,7 +271,7 @@ def test_control_status_is_not_filtered() -> None:
 
 
 def test_readme_timeseries_example(capsys: pytest.CaptureFixture[str]) -> None:
-    readme = (TESTS.parent / "README.md").read_text(encoding="utf-8")
+    readme = (TESTS.parent / "docs/guide.md").read_text(encoding="utf-8")
     block = next(
         block.split("```", 1)[0]
         for block in readme.split("```python\n")[1:]
